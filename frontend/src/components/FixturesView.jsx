@@ -55,6 +55,13 @@ function FixtureCard({ fixture, onChanged, onError }) {
 
   useEffect(() => { loadModel(); }, [fixture.id]);
 
+  useEffect(() => {
+    const mp = models[0]?.probabilities?.[prediction.market]?.[prediction.selection];
+    if (mp != null) {
+      setPrediction((p) => ({ ...p, final_probability: mp }));
+    }
+  }, [models, prediction.market, prediction.selection]);
+
   const submitPrediction = async (e) => {
     e.preventDefault();
     const mp = models[0]?.probabilities?.[prediction.market]?.[prediction.selection];
