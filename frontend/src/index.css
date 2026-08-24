@@ -1,0 +1,138 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #0f141a;
+  color: #e6ebf1;
+}
+
+.app-shell {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 16px 48px;
+}
+
+.topnav {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 16px 0;
+  border-bottom: 1px solid #26303c;
+  margin-bottom: 24px;
+}
+
+.brand {
+  font-weight: 700;
+  font-size: 18px;
+  color: #55aaff;
+}
+
+a {
+  color: #9fb3c8;
+  text-decoration: none;
+}
+
+a.active {
+  color: #fff;
+  font-weight: 600;
+}
+
+h1 { font-size: 20px; }
+h2 { font-size: 16px; }
+
+.card {
+  background: #171e27;
+  border: 1px solid #26303c;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.fixture-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+}
+
+.team {
+  font-weight: 600;
+}
+
+.status {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #26303c;
+  color: #9fb3c8;
+}
+
+.status.friendly { background: #3a2e12; color: #e7c664; }
+.status.finished { background: #1c2f1c; color: #85c98a; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+th, td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid #1f2832;
+}
+
+th { color: #9fb3c8; font-weight: 500; }
+
+select, input, button {
+  background: #1d2733;
+  color: #e6ebf1;
+  border: 1px solid #2c3947;
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 14px;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:hover { background: #263548; }
+
+button.primary { background: #255; }
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.muted { color: #7d8ea1; font-size: 13px; }
+
+.metric {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.quick-form {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed #26303c;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.error-bar {
+  background: #4a1f1f;
+  color: #ffd0d0;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  font-size: 13px;
+}
