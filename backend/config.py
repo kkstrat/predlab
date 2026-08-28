@@ -12,12 +12,16 @@ ODDS_API_KEY = os.environ.get("ODDS_API_KEY", "")
 ODDS_API_REGION = os.environ.get("ODDS_API_REGION", "uk")
 ODDS_API_SPORTS = os.environ.get("ODDS_API_SPORTS", "soccer_epl,soccer_friendly")
 
+# Canonical 2026/27 EPL team names. This is the single source of truth for team
+# naming — seed_gw1.py fixtures and any provider (football-data.org, The Odds API)
+# must normalize to these names via ingestion.normalize_team.
 EPL_TEAMS = [
     t.strip() for t in os.environ.get(
         "EPL_TEAMS",
-        "Arsenal,Bournemouth,Brighton,Chelsea,Crystal Palace,Everton,Fulham,Liverpool,"
-        "Manchester City,Manchester United,Newcastle,Nottingham Forest,Tottenham,"
-        "West Ham,Wolves,Aston Villa",
+        "AFC Bournemouth,Arsenal,Aston Villa,Brentford,Brighton & Hove Albion,"
+        "Chelsea,Coventry City,Crystal Palace,Everton,Fulham,Hull City,Ipswich Town,"
+        "Leeds United,Liverpool,Manchester City,Manchester United,Newcastle United,"
+        "Nottingham Forest,Sunderland,Tottenham Hotspur",
     ).split(",") if t.strip()
 ]
 

@@ -24,8 +24,37 @@ def _iso_finished(status):
     return status in MATCH_STATUS_FINISHED
 
 
+# Known spelling variants from data providers -> canonical config.EPL_TEAMS name.
+TEAM_ALIASES = {
+    "Bournemouth": "AFC Bournemouth",
+    "Brighton": "Brighton & Hove Albion",
+    "Brighton and Hove Albion": "Brighton & Hove Albion",
+    "Newcastle": "Newcastle United",
+    "Tottenham": "Tottenham Hotspur",
+    "Spurs": "Tottenham Hotspur",
+    "Man United": "Manchester United",
+    "Man Utd": "Manchester United",
+    "Manchester Utd": "Manchester United",
+    "Nott'm Forest": "Nottingham Forest",
+    "Nottingham Forrest": "Nottingham Forest",
+}
+
+
 def normalize_team(name):
-    return (name or "").strip()
+    """Normalize a provider team name to the canonical config.EPL_TEAMS name.
+
+    Handles common variations (trailing 'FC'/'AFC' club suffixes, short names,
+    'and' vs '&') so the EPL membership filter, fixture storage, odds matching,
+    and team_ratings lookups all reference the same canonical name.
+    """
+    name = (name or "").strip()
+    if not name:
+        return ""
+    for suffix in ("AFC", "FC"):  # longest first, so 'AFC' isn't swallowed by 'FC'
+        if name.upper().endswith(suffix) and len(name) > len(suffix):
+            name = name[:-len(suffix)].strip()
+            break
+    return TEAM_ALIASES.get(name, name)
 
 
 def _upsert_fixture(external_id, date_utc, home, away, competition, is_friendly, status="scheduled"):
