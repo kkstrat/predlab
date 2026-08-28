@@ -24,11 +24,6 @@ export default function DashboardView() {
 
   const t = stats.totals;
 
-  const ranks = [];
-  stats.team_ratings.forEach((r, i, arr) => {
-    ranks.push(i > 0 && r.elo === arr[i - 1].elo ? ranks[i - 1] : i + 1);
-  });
-
   return (
     <div>
       <h1>Dashboard</h1>
@@ -116,7 +111,7 @@ export default function DashboardView() {
             <tbody>
               {stats.team_ratings.map((r, i) => (
                 <tr key={r.team}>
-                  <td>{ranks[i]}</td>
+                  <td>{i + 1}</td>
                   <td>{r.team}</td>
                   <td>{Math.round(r.elo)}</td>
                   <td>{r.avg_goals_for?.toFixed(2) ?? '—'}</td>
