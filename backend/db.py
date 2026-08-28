@@ -31,6 +31,7 @@ def _migrate(conn):
     for stmt in [
         "ALTER TABLE fixtures ADD COLUMN home_score INTEGER",
         "ALTER TABLE fixtures ADD COLUMN away_score INTEGER",
+        "ALTER TABLE gut_calls ADD COLUMN tag TEXT",
     ]:
         try:
             conn.execute(stmt)

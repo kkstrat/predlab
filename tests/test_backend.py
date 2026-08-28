@@ -10,6 +10,49 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from backend import db
 from backend.app import create_app
+from backend.models.runner import _lambdas
+from backend.models.predictors import PoissonModel
+
+
+class LambdaStrengthsTest(unittest.TestCase):
+    """Expected-goal lambdas: cross-team per spec, prior-blended, 0.0 kept real."""
+
+    def _row(self, gf, ga):
+        return {"avg_goals_for": gf, "avg_goals_against": ga}
+
+    def test_zero_attack_crushes_home_xg(self):
+        # Palace scored 0 (GF 0.0): home xG drops well below league average,
+        # low-but-not-zero (previous bug jumped it to ~2.5).
+        palace, sunderland = self._row(0.0, 2.0), self._row(1.0, 2.0)
+        l_home, _ = _lambdas(palace, sunderland, 1.45, 1.15)
+        self.assertGreater(l_home, 0.0)
+        self.assertLess(l_home, 1.45)
+
+    def test_clean_sheet_crushes_opponent_xg(self):
+        # Arsenal's clean sheet (GA 0.0) craters the OPPONENT's xG below the
+        # away baseline, while Arsenal's own attack stays strong.
+        arsenal, chelsea = self._row(3.0, 0.0), self._row(3.0, 2.0)
+        l_home, l_away = _lambdas(arsenal, chelsea, 1.45, 1.15)
+        self.assertGreater(l_away, 0.0)
+        self.assertLess(l_away, 1.15)
+        self.assertGreater(l_home, 1.45)
+
+    def test_extreme_pair_no_longer_pins_btts_to_zero(self):
+        # Both sides had extreme one-match stats (a 0-goal side at home vs a
+        # clean-sheet side away); smoothing must keep both lambdas positive so
+        # the BTTS market doesn't collapse to exactly 0.00.
+        palace, city = self._row(0.0, 2.0), self._row(2.0, 1.0)
+        l_home, l_away = _lambdas(palace, city, 1.45, 1.15)
+        self.assertGreater(l_home, 0.0)
+        self.assertGreater(l_away, 0.0)
+        probs = PoissonModel().predict(l_home, l_away)
+        self.assertGreater(probs["BTTS"]["yes"], 0.05)
+
+    def test_missing_values_fall_back_to_league_average(self):
+        l_home, l_away = _lambdas(None, None, 1.45, 1.15)
+        self.assertEqual((l_home, l_away), (1.45, 1.15))
+        l_home, l_away = _lambdas(self._row(None, None), self._row(None, None), 1.45, 1.15)
+        self.assertEqual((l_home, l_away), (1.45, 1.15))
 
 
 class PredLabTestCase(unittest.TestCase):
@@ -114,6 +157,22 @@ class PredLabTestCase(unittest.TestCase):
             "probability": 0.75, "note": "gut",
         })
         self.assertEqual(resp.status_code, 201)
+
+    def test_gut_call_with_tag(self):
+        resp = self.client.post("/gut_calls", json={
+            "fixture_id": self.fixture_id, "market": "1X2", "selection": "home",
+            "probability": 0.75, "tag": "deep",
+        })
+        self.assertEqual(resp.status_code, 201)
+        self.assertEqual(resp.get_json()["tag"], "deep")
+
+    def test_gut_call_rejects_invalid_tag(self):
+        resp = self.client.post("/gut_calls", json={
+            "fixture_id": self.fixture_id, "market": "1X2", "selection": "home",
+            "probability": 0.75, "tag": "bogus",
+        })
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("invalid gut call tag", resp.get_json()["error"])
 
     def test_scoring_and_dashboard(self):
         # Log a prediction that will hit.

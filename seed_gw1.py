@@ -1,8 +1,11 @@
-"""Reset PredLab and load the real EPL 2026/27 Gameweek 1 fixtures.
+"""Load the real EPL 2026/27 Gameweek 1 fixtures.
 
 Unlike seed.py, this does NOT auto-generate predictions or gut calls.
 Fixtures are loaded bare so you log predictions/gut calls yourself through
 the Fixtures view, which is the actual intended workflow.
+
+Safe to re-run: only this gameweek's fixtures (external_id in 'gw1-*') and
+their dependent rows are removed first; no other data is ever cleared.
 
 Run from the predlab root:
     python seed_gw1.py
@@ -27,14 +30,35 @@ GW1_FIXTURES = [
 ]
 
 
+def _remove_gw_rows(prefix="gw1-", db_path=None):
+    """Delete only the fixtures for one gameweek plus their dependent rows.
+
+    Never touches other gameweeks (or other seeds) or league-wide team_ratings.
+    Child tables are cleared per-fixture first to satisfy foreign keys.
+    """
+    fixture_ids = [r["id"] for r in db.query(
+        "SELECT id FROM fixtures WHERE external_id LIKE ?", (f"{prefix}%",), db_path=db_path
+    )]
+    for fid in fixture_ids:
+        db.execute("DELETE FROM prediction_scores WHERE prediction_id IN "
+                   "(SELECT id FROM predictions WHERE fixture_id = ?)", (fid,), db_path=db_path)
+        db.execute("DELETE FROM gut_call_scores WHERE gut_call_id IN "
+                   "(SELECT id FROM gut_calls WHERE fixture_id = ?)", (fid,), db_path=db_path)
+        db.execute("DELETE FROM results WHERE fixture_id = ?", (fid,), db_path=db_path)
+        db.execute("DELETE FROM predictions WHERE fixture_id = ?", (fid,), db_path=db_path)
+        db.execute("DELETE FROM gut_calls WHERE fixture_id = ?", (fid,), db_path=db_path)
+    if fixture_ids:
+        placeholders = ",".join("?" * len(fixture_ids))
+        db.execute(f"DELETE FROM fixtures WHERE id IN ({placeholders})",
+                   tuple(fixture_ids), db_path=db_path)
+
+
 def reset_and_load(db_path=None):
     db.init_db(db_path)
 
-    # Wipe everything — predictions/gut_calls/scores/results are tied to
-    # fixtures via foreign key, so clear child tables first.
-    for table in ["prediction_scores", "gut_call_scores", "results",
-                  "predictions", "gut_calls", "fixtures", "team_ratings"]:
-        db.execute(f"DELETE FROM {table}", db_path=db_path)
+    # Remove only this gameweek's rows if the script is re-run. Existing data
+    # for other gameweeks (and team_ratings) is never cleared.
+    _remove_gw_rows("gw1-", db_path=db_path)
 
     for external_id, date_utc, home, away in GW1_FIXTURES:
         db.execute(

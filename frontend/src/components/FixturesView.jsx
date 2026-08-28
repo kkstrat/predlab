@@ -24,6 +24,7 @@ function FixtureCard({ fixture, onChanged, onError }) {
     selection: 'home',
     probability: 0.75,
     note: '',
+    tag: '',
   });
   const [score, setScore] = useState({ home_score: '', away_score: '' });
   const [loggedPredictions, setLoggedPredictions] = useState([]);
@@ -104,6 +105,7 @@ function FixtureCard({ fixture, onChanged, onError }) {
         selection: gut.selection,
         probability: Number(gut.probability),
         note: gut.note || null,
+        tag: gut.tag || null,
       });
       onChanged();
       loadLogged();
@@ -176,6 +178,7 @@ function FixtureCard({ fixture, onChanged, onError }) {
           {loggedGutCalls.map((g) => (
             <div key={g.id}>
               ✔ gut call logged — {g.market} {g.selection} @ {g.probability.toFixed(2)}
+              {g.tag && ` · [${g.tag}]`}
               {g.note && ` · "${g.note}"`}
               {g.brier_score != null && ` · scored, Brier ${g.brier_score.toFixed(3)}`}
             </div>
@@ -198,6 +201,11 @@ function FixtureCard({ fixture, onChanged, onError }) {
             <option value="0.95">0.95</option>
             <option value="0.75">0.75</option>
             <option value="0.50">0.50</option>
+          </select>
+          <select value={gut.tag} onChange={(e) => setGut({ ...gut, tag: e.target.value })}>
+            <option value="">no tag</option>
+            <option value="pattern">pattern</option>
+            <option value="deep">deep</option>
           </select>
           <input placeholder="note (optional)" value={gut.note}
             onChange={(e) => setGut({ ...gut, note: e.target.value })} />

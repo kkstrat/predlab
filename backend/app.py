@@ -14,6 +14,9 @@ from . import config
 from .models.registry import compute_all, get_model
 
 ALLOWED_GUT_PROBABILITIES = {0.95, 0.75, 0.50}
+ALLOWED_GUT_TAGS = {
+    None, "pattern", "deep",
+}
 ALLOWED_SIGNALS = {
     None, "injury_news", "lineup_rotation", "manager_tendency", "fatigue", "other",
 }
@@ -196,6 +199,8 @@ def _register_routes(app):
             return jsonify({"error": "probability must be one of {0.95, 0.75, 0.50}"}), 400
         if not _valid_selection(data["market"], data["selection"]):
             return jsonify({"error": "invalid market/selection"}), 400
+        if data.get("tag") not in ALLOWED_GUT_TAGS:
+            return jsonify({"error": "invalid gut call tag"}), 400
 
         created_at = data.get("created_at") or _now_iso()
         fixture = _get_fixture(db_path, data["fixture_id"])
@@ -204,10 +209,10 @@ def _register_routes(app):
             return jsonify({"error": error}), 400
 
         gut_id = db.execute(
-            """INSERT INTO gut_calls (fixture_id, market, selection, probability, note, created_at)
-               VALUES (?, ?, ?, ?, ?, ?)""",
+            """INSERT INTO gut_calls (fixture_id, market, selection, probability, note, tag, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
             (fixture["id"], data["market"], data["selection"], probability,
-             data.get("note"), created_at),
+             data.get("note"), data.get("tag"), created_at),
             db_path=db_path,
         )
         return jsonify(_get_gut_call(db_path, gut_id)), 201

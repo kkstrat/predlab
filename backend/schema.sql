@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS gut_calls (
     selection       TEXT NOT NULL,
     probability     REAL NOT NULL CHECK (probability IN (0.95, 0.75, 0.50)),
     note            TEXT,
+    tag             TEXT,            -- optional: 'pattern' | 'deep' | null
     created_at      TEXT NOT NULL   -- must be < fixtures.date_utc, enforced at insert
 );
 
