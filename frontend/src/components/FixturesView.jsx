@@ -59,7 +59,7 @@ function FixtureCard({ fixture, onChanged, onError }) {
   useEffect(() => {
     const mp = models[0]?.probabilities?.[prediction.market]?.[prediction.selection];
     if (mp != null) {
-      setPrediction((p) => ({ ...p, final_probability: mp }));
+      setPrediction((p) => ({ ...p, final_probability: Number(mp.toFixed(4)) }));
     }
   }, [models, prediction.market, prediction.selection]);
 
@@ -161,7 +161,7 @@ function FixtureCard({ fixture, onChanged, onError }) {
             setPrediction({ ...prediction, selection: e.target.value })}>
             {SELECTIONS[prediction.market].map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
-          <input type="number" min="0.01" max="0.99" step="0.01"
+          <input type="number" min="0.01" max="0.99" step="any"
             value={prediction.final_probability}
             onChange={(e) => setPrediction({ ...prediction, final_probability: e.target.value })} />
           <select value={prediction.adjustment_source} onChange={(e) =>
