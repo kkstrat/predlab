@@ -1,0 +1,2 @@
+1. GW1 — the prediction form's final_probability field silently defaulted to 0.5 instead of the model's real number; fixed for GW2 onward so the field now pre-fills with the model's actual predicted probability (still editable if you want to adjust it), GW1 entries left as-is.
+2. Predictions always use 1X2, for consistency across the season — BTTS/O2.5 are only used for gut calls, logged wherever I actually have real conviction on the match.
