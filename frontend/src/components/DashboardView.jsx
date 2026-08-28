@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { getDashboardStats } from '../api.js';
+import { competitionRanks } from '../ranking.js';
 
 function Metric({ label, value, sub }) {
   return (
@@ -23,6 +24,7 @@ export default function DashboardView() {
   if (!stats) return <p className="muted">Loading…</p>;
 
   const t = stats.totals;
+  const eloRanks = competitionRanks(stats.team_ratings.map((r) => r.elo));
 
   return (
     <div>
@@ -111,7 +113,7 @@ export default function DashboardView() {
             <tbody>
               {stats.team_ratings.map((r, i) => (
                 <tr key={r.team}>
-                  <td>{i + 1}</td>
+                  <td>{eloRanks[i]}</td>
                   <td>{r.team}</td>
                   <td>{Math.round(r.elo)}</td>
                   <td>{r.avg_goals_for?.toFixed(2) ?? '—'}</td>
