@@ -66,8 +66,12 @@ def _get_closing(fixture_id, market, selection, db_path):
     )
 
 
-def score_fixture(fixture_id, home_score, away_score, db_path=None):
-    """Score all predictions and gut calls for a finished fixture."""
+def score_fixture(fixture_id, home_score, away_score, db_path=None, update_ratings=True):
+    """Score all predictions and gut calls for a finished fixture.
+
+    Pass update_ratings=False for throwaway databases (e.g. external audits)
+    where team_ratings would be meaningless anyway.
+    """
     scored_at = datetime.now(timezone.utc).isoformat()
 
     outcomes = derive_outcomes(home_score, away_score)
@@ -89,7 +93,8 @@ def score_fixture(fixture_id, home_score, away_score, db_path=None):
     gut_summary = _score_gut_calls(fixture_id, outcomes, scored_at, db_path)
 
     # Update team ratings from the final score
-    _update_team_ratings(fixture, home_score, away_score, scored_at, db_path)
+    if update_ratings:
+        _update_team_ratings(fixture, home_score, away_score, scored_at, db_path)
 
     db.execute(
         "UPDATE fixtures SET status = 'finished', home_score = ?, away_score = ? WHERE id = ?",

@@ -95,9 +95,11 @@ class PredLabTestCase(unittest.TestCase):
         resp = self.client.get(f"/fixtures/{self.fixture_id}/model")
         self.assertEqual(resp.status_code, 200)
         data = resp.get_json()
+        self.assertIn("models", data)
+        self.assertGreaterEqual(len(data["models"]), 1)
+        probs = data["models"][0]["probabilities"]
         for market in ("1X2", "OU_2.5", "BTTS"):
-            probs = data["probabilities"][market]
-            self.assertAlmostEqual(sum(probs.values()), 1.0, places=4)
+            self.assertAlmostEqual(sum(probs[market].values()), 1.0, places=4)
 
     def test_prediction_creation(self):
         resp = self.client.post("/predictions", json={
