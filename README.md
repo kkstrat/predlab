@@ -15,6 +15,16 @@ Once the match is played, both guesses are graded the same way — using **Brier
 
 Predictions and gut calls can never be edited or deleted once logged. This is enforced at the code level, not just a rule I follow. A track record only means something if it can't be quietly cleaned up after the fact — so the system doesn't allow it, even for me.
 
+## Auditing someone else's predictions
+
+The same scoring logic that grades my own gut calls doesn't actually care whose predictions it's grading. `audit_import.py` takes a CSV of someone else's historical predictions and outcomes, builds a completely separate throwaway database, and scores it with the same Brier-score math — without touching my own data or track record.
+
+```python
+python audit_import.py <csv_path> <output_db_path>
+```
+
+Built this after realizing the interesting part of PredLab was never really the football model — it's the discipline of checking whether a stated confidence level held up. That check works on anyone's predictions, not just mine.
+
 ## Current scope
 
 - English Premier League, 2026/27 season
