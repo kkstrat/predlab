@@ -212,10 +212,12 @@ def _register_routes(app):
             return jsonify({"error": error}), 400
 
         gut_id = db.execute(
-            """INSERT INTO gut_calls (fixture_id, market, selection, probability, note, tag, created_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            """INSERT INTO gut_calls (fixture_id, market, selection, probability, note, tag,
+                                      home_subject, away_subject, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (fixture["id"], data["market"], data["selection"], probability,
-             data.get("note"), data.get("tag"), created_at),
+             data.get("note"), data.get("tag"), fixture["home_team"], fixture["away_team"],
+             created_at),
             db_path=db_path,
         )
         return jsonify(_get_gut_call(db_path, gut_id)), 201

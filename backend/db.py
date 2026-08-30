@@ -32,6 +32,8 @@ def _migrate(conn):
         "ALTER TABLE fixtures ADD COLUMN home_score INTEGER",
         "ALTER TABLE fixtures ADD COLUMN away_score INTEGER",
         "ALTER TABLE gut_calls ADD COLUMN tag TEXT",
+        "ALTER TABLE gut_calls ADD COLUMN home_subject TEXT",
+        "ALTER TABLE gut_calls ADD COLUMN away_subject TEXT",
     ]:
         try:
             conn.execute(stmt)

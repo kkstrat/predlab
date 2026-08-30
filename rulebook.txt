@@ -1,13 +1,1 @@
-1. GW1 — the prediction form's final_probability field silently defaulted to 0.5 instead of the model's real number; fixed for GW2 onward so the field now pre-fills with the model's actual predicted probability (still editable if you want to adjust it), GW1 entries left as-is.
-2. Predictions always use 1X2, for consistency across the season — BTTS/O2.5 are only used for gut calls, logged wherever I actually have real conviction on the match.
-3. GW 2
-Gut Call Tag — Pattern vs Deep:
-Pattern = a generalizable heuristic applied without fixture-specific reasoning (e.g., home fortress form, historical rivalry trends).
-Deep = reasoning tied to this specific fixture (team news, current form, conviction-vs-hope splits, tactical matchup).
-Tagging rule: when a call mixes both, tag by what's load-bearing — the part actually carrying the uncertainty — not by everything mentioned in the reasoning. A trivial pattern element (e.g., "home teams usually score") doesn't override a fixture-specific judgment call if that's where the real risk sits.
-4. Gut Call Notes
-"Home nets" — home team scoring is a passive/default assumption, not the emphasized part of the call. Reflects a baseline pattern-read rather than stated conviction.
-"Home lock" — home team scoring is explicitly asserted with high conviction, treated as a near-certain anchor point for the rest of the call.
-"Away wildcard" — near-certain the away team scores; uncertainty is in how, not whether. Reflects high-confidence BTTS reads (e.g., ≥0.70).
-"Away hope" — genuine uncertainty on the away team scoring; conviction is emotional/aspirational rather than evidential. Reflects near-coin-flip BTTS reads (~0.50). The probability, not the note, is the honest signal — the note just names the feeling behind it.
-5.
+Add two new fields to gut calls: home_subject and away_subject. Auto-populate both from the fixture's home_team and away_team at the time the gut call is logged — no manual input, no dropdown. Store alongside existing note/tag fields. Display in History/GC as: note text (home_subject), note text (away_subject) — e.g. home lock (Man Utd), away wildcard (Newcastle). No change to By Note table aggregation — it still keys off the raw note string only. No new UI element needed since it's auto-filled from data already present on the fixture.

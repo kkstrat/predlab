@@ -92,8 +92,66 @@ def note_record(note, db_path=None):
     return None
 
 
+def _by_subject(db_path):
+    rows = db.query(
+        """SELECT g.note, g.home_subject, g.away_subject, s.brier_score
+           FROM gut_calls g
+           LEFT JOIN gut_call_scores s ON s.gut_call_id = g.id
+           WHERE g.note IS NOT NULL AND TRIM(g.note) != ''""",
+        db_path=db_path,
+    )
+    groups = {}
+    for r in rows:
+        note = r["note"]
+        idx = note.find(",")
+        if idx != -1:
+            pairs = (
+                (r["home_subject"], note[:idx].strip()),
+                (r["away_subject"], note[idx + 1:].strip()),
+            )
+        else:
+            home = r["home_subject"] or r["away_subject"]
+            pairs = ((home, note.strip()),) if home else ()
+        for team, phrase in pairs:
+            if not team or not phrase:
+                continue
+            key = (_normalize_note(team), _normalize_note(phrase))
+            group = groups.setdefault(key, {
+                "team": team,
+                "phrase": phrase,
+                "normalized": _normalize_note(phrase),
+                "n": 0,
+                "scored": 0,
+                "hits": 0,
+                "briers": [],
+            })
+            group["n"] += 1
+            if r["brier_score"] is not None:
+                group["scored"] += 1
+                group["briers"].append(r["brier_score"])
+                if r["brier_score"] < HIT_BRIER_THRESHOLD:
+                    group["hits"] += 1
+
+    out = []
+    for g in groups.values():
+        brier = (sum(g["briers"]) / len(g["briers"]) if g["briers"] else None)
+        out.append({
+            "team": g["team"],
+            "phrase": g["phrase"],
+            "normalized": g["normalized"],
+            "n": g["n"],
+            "scored": g["scored"],
+            "hits": g["hits"],
+            "hit_rate": round(g["hits"] / g["scored"], 4) if g["scored"] else None,
+            "brier": round(brier, 4) if brier is not None else None,
+        })
+    out.sort(key=lambda x: (x["team"].lower(), x["phrase"].lower()))
+    return out
+
+
 def gut_call_calibration(db_path=None):
     return {
         "by_tag": _by_tag(db_path),
         "by_note": _by_note(db_path),
+        "by_subject": _by_subject(db_path),
     }

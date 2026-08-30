@@ -115,6 +115,45 @@ class GutCallCalibrationTest(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertIsNone(resp.get_json())
 
+    def test_calibration_by_subject_no_comma(self):
+        # Notes without a comma collapse into one row keyed by home team + note.
+        resp = self.client.get("/gut_calls/calibration")
+        by_key = {(r["team"], r["normalized"]): r for r in resp.get_json()["by_subject"]}
+        self.assertEqual(len(by_key), 2)
+        rec = by_key[("Arsenal", "anfield fortress")]
+        self.assertEqual(rec["phrase"], "Anfield Fortress")  # first-seen raw phrase
+        self.assertEqual(rec["n"], 2)
+        self.assertEqual(rec["scored"], 2)
+        self.assertEqual(rec["hits"], 2)
+        self.assertEqual(rec["hit_rate"], 1.0)
+        other = by_key[("Arsenal", "no tag here")]
+        self.assertEqual(other["n"], 1)
+        self.assertEqual(other["hits"], 1)
+
+    def test_calibration_by_subject_splits_comma_note(self):
+        # A comma note produces two rows: home-side phrase + home, away-side + away.
+        db.execute(
+            """INSERT INTO fixtures (external_id, date_utc, home_team, away_team,
+                                     competition, is_friendly, status)
+               VALUES (?, ?, ?, ?, ?, ?, 'scheduled')""",
+            ("gc-2", "2099-01-05T15:00:00+00:00",
+             "Manchester United", "Newcastle United", "Friendly", 1),
+            db_path=self.db_path,
+        )
+        fid = db.query_one(
+            "SELECT id FROM fixtures WHERE external_id = 'gc-2'", db_path=self.db_path
+        )["id"]
+        self.client.post("/gut_calls", json={
+            "fixture_id": fid, "market": "1X2", "selection": "home",
+            "probability": 0.75, "note": "home lock, away wildcard",
+        })
+        resp = self.client.get("/gut_calls/calibration")
+        by_key = {(r["team"], r["normalized"]): r for r in resp.get_json()["by_subject"]}
+        self.assertIn(("Manchester United", "home lock"), by_key)
+        self.assertIn(("Newcastle United", "away wildcard"), by_key)
+        self.assertEqual(by_key[("Manchester United", "home lock")]["n"], 1)
+        self.assertEqual(by_key[("Newcastle United", "away wildcard")]["n"], 1)
+
     def test_note_reuse_lookup_missing(self):
         resp = self.client.get("/gut_calls/notes?q=never-used")
         self.assertEqual(resp.status_code, 200)

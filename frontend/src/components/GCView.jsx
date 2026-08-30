@@ -1,12 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import { getGutCallCalibration } from '../api.js';
 
-function CalTable({ rows, noteMode }) {
+function CalTable({ rows, noteMode, subjectMode }) {
+  const labelHeader = subjectMode ? 'Team — phrase' : noteMode ? 'Note' : 'Tag';
+  const rowKey = subjectMode
+    ? (r) => `${r.team}|${r.normalized}`
+    : noteMode
+      ? (r) => r.normalized
+      : (r) => r.tag;
+  const rowLabel = subjectMode
+    ? (r) => `${r.team} — ${r.phrase}`
+    : noteMode
+      ? (r) => r.note
+      : (r) => r.tag;
   return (
     <table>
       <thead>
         <tr>
-          <th>{noteMode ? 'Note' : 'Tag'}</th>
+          <th>{labelHeader}</th>
           <th>n</th>
           <th>scored</th>
           <th>hits</th>
@@ -16,8 +27,8 @@ function CalTable({ rows, noteMode }) {
       </thead>
       <tbody>
         {rows.map((r) => (
-          <tr key={noteMode ? r.normalized : r.tag}>
-            <td>{noteMode ? r.note : r.tag}</td>
+          <tr key={rowKey(r)}>
+            <td>{rowLabel(r)}</td>
             <td>{r.n}</td>
             <td>{r.scored}</td>
             <td>{r.hits}</td>
@@ -26,7 +37,7 @@ function CalTable({ rows, noteMode }) {
           </tr>
         ))}
         {rows.length === 0 && (
-          <tr><td colSpan={6} className="muted">No {noteMode ? 'notes' : 'tagged'} gut calls yet.</td></tr>
+          <tr><td colSpan={6} className="muted">No {noteMode ? 'notes' : subjectMode ? 'subject-paired' : 'tagged'} gut calls yet.</td></tr>
         )}
       </tbody>
     </table>
@@ -60,6 +71,11 @@ export default function GCView() {
       <div className="card">
         <h2>By note</h2>
         <CalTable rows={data.by_note} noteMode />
+      </div>
+
+      <div className="card">
+        <h2>By subject</h2>
+        <CalTable rows={data.by_subject} subjectMode />
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { getFixturesHistory, utcLocal } from '../api.js';
+import { formatGutNote } from '../gutNote.js';
 
 function fmt(n, digits = 2) {
   return n == null ? '—' : Number(n).toFixed(digits);
@@ -39,7 +40,7 @@ function HistoryCard({ fixture }) {
       {fixture.gut_calls.map((g) => (
         <div key={`g${g.id}`} className="muted" style={{ marginTop: 6 }}>
           Gut call — {g.market} {g.selection} @ {fmt(g.probability)}
-          {g.note && ` · "${g.note}"`}
+          {g.note && ` · "${formatGutNote(g.note, g.home_subject, g.away_subject)}"`}
           {g.brier_score != null && <> · Brier <strong>{fmt(g.brier_score, 3)}</strong></>}
         </div>
       ))}

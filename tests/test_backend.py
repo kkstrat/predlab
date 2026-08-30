@@ -168,6 +168,34 @@ class PredLabTestCase(unittest.TestCase):
         self.assertEqual(resp.status_code, 201)
         self.assertEqual(resp.get_json()["tag"], "deep")
 
+    def test_gut_call_auto_populates_subjects(self):
+        resp = self.client.post("/gut_calls", json={
+            "fixture_id": self.fixture_id, "market": "1X2", "selection": "home",
+            "probability": 0.75, "note": "home lock, away wildcard",
+        })
+        self.assertEqual(resp.status_code, 201)
+        body = resp.get_json()
+        self.assertEqual(body["home_subject"], "Arsenal")
+        self.assertEqual(body["away_subject"], "Chelsea")
+        row = db.query_one(
+            "SELECT home_subject, away_subject FROM gut_calls WHERE id = ?",
+            (body["id"],), db_path=self.db_path,
+        )
+        self.assertEqual(row["home_subject"], "Arsenal")
+        self.assertEqual(row["away_subject"], "Chelsea")
+
+    def test_history_gut_calls_carry_subjects(self):
+        self.client.post("/gut_calls", json={
+            "fixture_id": self.fixture_id, "market": "1X2", "selection": "home",
+            "probability": 0.75, "note": "home lock, away wildcard",
+        })
+        self.client.post(f"/fixtures/{self.fixture_id}/score", json={"home_score": 2, "away_score": 1})
+        history = self.client.get("/fixtures/history").get_json()
+        guts = [g for f in history for g in f["gut_calls"]]
+        self.assertEqual(len(guts), 1)
+        self.assertEqual(guts[0]["home_subject"], "Arsenal")
+        self.assertEqual(guts[0]["away_subject"], "Chelsea")
+
     def test_gut_call_rejects_invalid_tag(self):
         resp = self.client.post("/gut_calls", json={
             "fixture_id": self.fixture_id, "market": "1X2", "selection": "home",

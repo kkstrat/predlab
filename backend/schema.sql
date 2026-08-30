@@ -52,6 +52,8 @@ CREATE TABLE IF NOT EXISTS gut_calls (
     probability     REAL NOT NULL CHECK (probability IN (0.95, 0.75, 0.50)),
     note            TEXT,
     tag             TEXT,            -- optional: 'pattern' | 'deep' | null
+    home_subject    TEXT,            -- auto-populated from fixture home_team at save
+    away_subject    TEXT,            -- auto-populated from fixture away_team at save
     created_at      TEXT NOT NULL   -- must be < fixtures.date_utc, enforced at insert
 );
 

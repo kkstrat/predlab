@@ -116,10 +116,11 @@ def _log_gut_call(fixture, db_path):
     market = "BTTS" if fixture["id"] % 2 == 0 else "1X2"
     selection = "yes" if market == "BTTS" else "home"
     db.execute(
-        """INSERT INTO gut_calls (fixture_id, market, selection, probability, note, created_at)
-           VALUES (?, ?, ?, ?, ?, ?)""",
+        """INSERT INTO gut_calls (fixture_id, market, selection, probability, note,
+                                  home_subject, away_subject, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
         (fixture["id"], market, selection, 0.75,
-         "demo gut call",
+         "demo gut call", fixture["home_team"], fixture["away_team"],
          (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()), db_path=db_path,
     )
 
