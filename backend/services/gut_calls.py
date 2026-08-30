@@ -1,0 +1,99 @@
+"""Aggregation views over gut-call records for the GC page and the note-reuse flag.
+
+Reuses the same HIT_BRIER_THRESHOLD convention as the dashboard and audit
+report: a call counts as a "hit" when its Brier score is below 0.25 (i.e. the
+selected outcome came true). No new input fields are required — everything here
+is computed from data already being logged (gut_calls joined with
+gut_call_scores).
+"""
+
+import re
+
+from .. import db
+
+HIT_BRIER_THRESHOLD = 0.25
+
+
+def _normalize_note(text):
+    """Collapse case/whitespace so 'Anfield Fortress' == 'anfield fortress'."""
+    if not text:
+        return None
+    return re.sub(r"\s+", " ", text.strip().lower())
+
+
+def _by_tag(db_path):
+    rows = db.query(
+        """SELECT g.tag,
+                  COUNT(*) AS n,
+                  SUM(CASE WHEN s.brier_score IS NOT NULL THEN 1 ELSE 0 END) AS scored,
+                  SUM(CASE WHEN s.brier_score IS NOT NULL AND s.brier_score < 0.25
+                           THEN 1 ELSE 0 END) AS hits,
+                  AVG(s.brier_score) AS brier
+           FROM gut_calls g
+           LEFT JOIN gut_call_scores s ON s.gut_call_id = g.id
+           WHERE g.tag IS NOT NULL
+           GROUP BY g.tag
+           ORDER BY g.tag""",
+        db_path=db_path,
+    )
+    for r in rows:
+        scored = r["scored"] or 0
+        r["hit_rate"] = round(r["hits"] / scored, 4) if scored else None
+        r["brier"] = round(r["brier"], 4) if r["brier"] is not None else None
+    return rows
+
+
+def _by_note(db_path):
+    rows = db.query(
+        """SELECT g.note, s.brier_score
+           FROM gut_calls g
+           LEFT JOIN gut_call_scores s ON s.gut_call_id = g.id
+           WHERE g.note IS NOT NULL AND TRIM(g.note) != ''""",
+        db_path=db_path,
+    )
+    groups = {}
+    for r in rows:
+        key = _normalize_note(r["note"])
+        if key is None:
+            continue
+        group = groups.setdefault(key, {"n": 0, "scored": 0, "hits": 0, "briers": []})
+        group["raw_note"] = r["note"]
+        group["n"] += 1
+        if r["brier_score"] is not None:
+            group["scored"] += 1
+            group["briers"].append(r["brier_score"])
+            if r["brier_score"] < HIT_BRIER_THRESHOLD:
+                group["hits"] += 1
+
+    out = []
+    for key, g in groups.items():
+        brier = (sum(g["briers"]) / len(g["briers"]) if g["briers"] else None)
+        out.append({
+            "note": g["raw_note"],
+            "normalized": key,
+            "n": g["n"],
+            "scored": g["scored"],
+            "hits": g["hits"],
+            "hit_rate": round(g["hits"] / g["scored"], 4) if g["scored"] else None,
+            "brier": round(brier, 4) if brier is not None else None,
+        })
+    out.sort(key=lambda x: x["note"].lower())
+    return out
+
+
+def note_record(note, db_path=None):
+    """Return the aggregated record for a single (already-normalized) note."""
+    key = _normalize_note(note)
+    if key is None:
+        return None
+    for rec in _by_note(db_path):
+        if rec["normalized"] == key:
+            return rec
+    return None
+
+
+def gut_call_calibration(db_path=None):
+    return {
+        "by_tag": _by_tag(db_path),
+        "by_note": _by_note(db_path),
+    }

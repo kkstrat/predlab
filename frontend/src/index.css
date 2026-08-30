@@ -136,3 +136,12 @@ button.primary { background: #255; }
   margin-bottom: 12px;
   font-size: 13px;
 }
+
+.note-reuse {
+  font-size: 12px;
+  color: #9fb3c8;
+  background: #22303f;
+  padding: 4px 8px;
+  border-radius: 6px;
+  align-self: center;
+}

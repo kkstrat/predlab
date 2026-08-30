@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   getFixtures, getModelPreview, createPrediction, createGutCall, scoreFixture, utcLocal,
-  getPredictions, getGutCalls,
+  getPredictions, getGutCalls, getGutCallNoteRecord,
 } from '../api.js';
 
 const MARKETS = ['1X2', 'OU_2.5', 'BTTS'];
@@ -29,6 +29,7 @@ function FixtureCard({ fixture, onChanged, onError }) {
   const [score, setScore] = useState({ home_score: '', away_score: '' });
   const [loggedPredictions, setLoggedPredictions] = useState([]);
   const [loggedGutCalls, setLoggedGutCalls] = useState([]);
+  const [noteRecord, setNoteRecord] = useState(null);
 
   const loadLogged = async () => {
     try {
@@ -44,6 +45,19 @@ function FixtureCard({ fixture, onChanged, onError }) {
   };
 
   useEffect(() => { loadLogged(); }, [fixture.id]);
+
+  const loadNoteRecord = async (note) => {
+    const trimmed = (note || '').trim();
+    if (!trimmed) { setNoteRecord(null); return; }
+    try {
+      const rec = await getGutCallNoteRecord(trimmed);
+      setNoteRecord(rec);
+    } catch {
+      setNoteRecord(null);
+    }
+  };
+
+  useEffect(() => { loadNoteRecord(gut.note); }, [gut.note]);
 
   const loadModel = async () => {
     try {
@@ -209,6 +223,11 @@ function FixtureCard({ fixture, onChanged, onError }) {
           </select>
           <input placeholder="note (optional)" value={gut.note}
             onChange={(e) => setGut({ ...gut, note: e.target.value })} />
+          {noteRecord && noteRecord.n > 0 && (
+            <span className="note-reuse">
+              reused: n={noteRecord.n} · hit rate {noteRecord.hit_rate ?? '—'}
+            </span>
+          )}
           <button type="submit">Log gut call</button>
         </form>
       )}

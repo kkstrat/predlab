@@ -50,6 +50,16 @@ export async function getGutCalls(fixtureId) {
   return data;
 }
 
+export async function getGutCallCalibration() {
+  const { data } = await client.get('/gut_calls/calibration');
+  return data;
+}
+
+export async function getGutCallNoteRecord(note) {
+  const { data } = await client.get('/gut_calls/notes', { params: { q: note } });
+  return data;
+}
+
 export function utcLocal(iso) {
   if (!iso) return '';
   const d = new Date(iso);

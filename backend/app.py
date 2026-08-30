@@ -86,6 +86,9 @@ def _validate_resolution(fixture, created_at, db_path):
 
 
 def _register_routes(app):
+    from .services.audit import register_audit_routes
+    register_audit_routes(app)
+
     db_path = app.config["PREDLAB_DB"]
 
     # ---------------- Fixtures ----------------
@@ -235,6 +238,18 @@ def _register_routes(app):
                WHERE g.fixture_id = ? ORDER BY g.created_at""",
             (fixture_id,), db_path=db_path)
         return jsonify([dict(r) for r in rows])
+
+    # ---------------- Gut-call calibration views (GC page + note reuse) ----------------
+    @app.get("/gut_calls/calibration")
+    def gut_calls_calibration():
+        from .services.gut_calls import gut_call_calibration
+        return jsonify(gut_call_calibration(db_path))
+
+    @app.get("/gut_calls/notes")
+    def gut_call_note_record():
+        from .services.gut_calls import note_record
+        note = request.args.get("q", "")
+        return jsonify(note_record(note, db_path))
 
     # ---------------- Seeding results / scoring (adjunct, not a prediction mutation) ----
     @app.post("/fixtures/<int:fixture_id>/score")

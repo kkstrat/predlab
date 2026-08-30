@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom';
 import FixturesView from './components/FixturesView.jsx';
 import DashboardView from './components/DashboardView.jsx';
 import HistoryView from './components/HistoryView.jsx';
+import GCView from './components/GCView.jsx';
 import './index.css';
 
 function App() {
@@ -21,12 +22,16 @@ function App() {
           <NavLink to="/dashboard" className={({ isActive }) => (isActive ? 'active' : '')}>
             Dashboard
           </NavLink>
+          <NavLink to="/gc" className={({ isActive }) => (isActive ? 'active' : '')}>
+            GC
+          </NavLink>
         </nav>
         <main className="content">
           <Routes>
             <Route path="/" element={<FixturesView />} />
             <Route path="/history" element={<HistoryView />} />
             <Route path="/dashboard" element={<DashboardView />} />
+            <Route path="/gc" element={<GCView />} />
           </Routes>
         </main>
       </div>
