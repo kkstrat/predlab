@@ -2,6 +2,19 @@
   box-sizing: border-box;
 }
 
+:root {
+  --pl-bg: #0A0C0F;
+  --pl-panel: #14181D;
+  --pl-hairline: #232A31;
+  --pl-model: #5FC9C9;
+  --pl-gut: #E0A23D;
+  --pl-text: #E7E3DA;
+  --pl-text-muted: #7C8790;
+  --pl-font-display: 'Space Grotesk', sans-serif;
+  --pl-font-mono: 'IBM Plex Mono', monospace;
+  --pl-font-body: 'IBM Plex Sans', sans-serif;
+}
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -159,4 +172,95 @@ button.primary { background: #255; }
 
 .gw-header:first-of-type {
   margin-top: 8px;
+}
+
+/* ---- Home / landing page ---- */
+
+.home {
+  font-family: var(--pl-font-body);
+  color: var(--pl-text);
+}
+
+.pl-wordmark {
+  font-family: var(--pl-font-display);
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--pl-text);
+}
+
+.pl-mono {
+  font-family: var(--pl-font-mono);
+}
+
+.pl-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.pl-head-meta {
+  color: var(--pl-text-muted);
+  font-size: 13px;
+  letter-spacing: 0.4px;
+}
+
+.pl-panel {
+  background: var(--pl-panel);
+  border: 1px solid var(--pl-hairline);
+}
+
+.pl-trace {
+  padding: 18px 18px 14px;
+  margin-bottom: 24px;
+}
+
+.pl-trace-readouts {
+  display: flex;
+  gap: 28px;
+  font-family: var(--pl-font-mono);
+  font-size: 14px;
+  letter-spacing: 0.3px;
+  margin-bottom: 12px;
+}
+
+.pl-tile-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 760px) {
+  .pl-tile-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pl-tile {
+  background: var(--pl-panel);
+  border: 1px solid var(--pl-hairline);
+  padding: 18px;
+  text-decoration: none;
+  color: var(--pl-text);
+  display: block;
+  transition: border-color 0.12s ease;
+}
+
+.pl-tile:hover {
+  border-color: #3a4650;
+}
+
+.pl-tile-name {
+  font-family: var(--pl-font-display);
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.pl-tile-status {
+  font-family: var(--pl-font-mono);
+  color: var(--pl-text-muted);
+  font-size: 12px;
+  margin-top: 6px;
 }
