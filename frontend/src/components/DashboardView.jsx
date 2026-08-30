@@ -109,12 +109,13 @@ export default function DashboardView() {
         <div className="card">
           <h2>Team ratings (Elo)</h2>
           <table>
-            <thead><tr><th>Rank</th><th>Team</th><th>Elo</th><th>GF/gm</th><th>GA/gm</th></tr></thead>
+            <thead><tr><th>Rank</th><th>Team</th><th>GP</th><th>Elo</th><th>GF/gm</th><th>GA/gm</th></tr></thead>
             <tbody>
               {stats.team_ratings.map((r, i) => (
                 <tr key={r.team}>
                   <td>{eloRanks[i]}</td>
                   <td>{r.team}</td>
+                  <td>{r.games_played}</td>
                   <td>{Math.round(r.elo)}</td>
                   <td>{r.avg_goals_for?.toFixed(2) ?? '—'}</td>
                   <td>{r.avg_goals_against?.toFixed(2) ?? '—'}</td>

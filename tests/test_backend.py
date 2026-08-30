@@ -204,6 +204,45 @@ class PredLabTestCase(unittest.TestCase):
         elos = {r["team"]: r["elo"] for r in rows}
         self.assertGreater(elos["Arsenal"], 1500)
 
+    def test_history_groups_by_gameweek(self):
+        # Seed two fixtures from different gameweeks, plus keep the t-1 seed,
+        # and score each.
+        for ext, date in [("gw1-1", "2099-01-01T15:00:00+00:00"),
+                          ("gw2-1", "2099-01-02T15:00:00+00:00")]:
+            db.execute(
+                """INSERT INTO fixtures (external_id, date_utc, home_team, away_team,
+                                         competition, is_friendly, status)
+                   VALUES (?, ?, ?, ?, ?, ?, 'scheduled')""",
+                (ext, date, "Liverpool", "Man City", "Premier League", 0),
+                db_path=self.db_path,
+            )
+            fid = db.query_one(
+                "SELECT id FROM fixtures WHERE external_id = ?", (ext,), db_path=self.db_path
+            )["id"]
+            self.client.post(f"/fixtures/{fid}/score", json={"home_score": 1, "away_score": 0})
+        self.client.post(f"/fixtures/{self.fixture_id}/score", json={"home_score": 1, "away_score": 0})
+
+        history = self.client.get("/fixtures/history").get_json()
+        labels = [f["gameweek"] for f in history]
+        self.assertIn("GW1", labels)
+        self.assertIn("GW2", labels)
+        self.assertIn("t-1", labels)  # the un-prefixed seed falls back to its id
+
+    def test_dashboard_team_ratings_gp(self):
+        self.client.post(f"/fixtures/{self.fixture_id}/score", json={"home_score": 2, "away_score": 0})
+        dash = self.client.get("/dashboard/stats").get_json()
+        by_team = {r["team"]: r for r in dash["team_ratings"]}
+        # Both Arsenal and Chelsea played exactly one graded match.
+        self.assertEqual(by_team["Arsenal"]["games_played"], 1)
+        self.assertEqual(by_team["Chelsea"]["games_played"], 1)
+
+    def test_gameweek_label_mapping(self):
+        from backend.app import _gameweek_label
+        self.assertEqual(_gameweek_label("gw1-7"), "GW1")
+        self.assertEqual(_gameweek_label("GW2-3"), "GW2")
+        self.assertEqual(_gameweek_label("t-1"), "t-1")
+        self.assertEqual(_gameweek_label(None), "Other")
+
 
 if __name__ == "__main__":
     unittest.main()

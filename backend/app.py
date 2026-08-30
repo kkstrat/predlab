@@ -274,6 +274,7 @@ def _register_routes(app):
         out = []
         for f in fixtures:
             fdict = dict(f)
+            fdict["gameweek"] = _gameweek_label(f["external_id"])
             fdict["predictions"] = [
                 dict(r) for r in db.query(
                     """SELECT p.*, s.brier_score, s.model_brier_score, s.clv_pct
@@ -295,6 +296,19 @@ def _register_routes(app):
     @app.get("/dashboard/stats")
     def dashboard_stats():
         return jsonify(_dashboard_stats(db_path))
+
+
+def _gameweek_label(external_id):
+    """Derive a display group label (e.g. 'GW1') from a fixture's external_id.
+
+    Expects ids like 'gw1-7'. Anything unrecognizable falls back to the raw
+    external_id so very fixture still has a stable grouping key.
+    """
+    import re
+    m = re.match(r"gw(\d+)", (external_id or ""), re.IGNORECASE)
+    if m:
+        return f"GW{int(m.group(1))}"
+    return external_id or "Other"
 
 
 def _valid_selection(market, selection):
@@ -350,11 +364,34 @@ def _dashboard_stats(db_path):
             "with_clv": _avg("SELECT COUNT(*) AS v FROM prediction_scores WHERE clv_pct IS NOT NULL"),
         },
         "scores_over_time": _brier_over_time(db_path),
-        "team_ratings": db.query(
-            "SELECT * FROM team_ratings ORDER BY elo DESC", db_path=db_path
-        ),
+        "team_ratings": _team_ratings_with_gp(db_path),
     }
     return stats
+
+
+def _games_played(db_path):
+    """team -> count of graded (finished) matches played so far."""
+    rows = db.query(
+        """SELECT team, COUNT(*) AS n
+           FROM (
+             SELECT home_team AS team FROM fixtures WHERE status = 'finished'
+             UNION ALL
+             SELECT away_team FROM fixtures WHERE status = 'finished'
+           )
+           GROUP BY team""",
+        db_path=db_path,
+    )
+    return {r["team"]: r["n"] for r in rows}
+
+
+def _team_ratings_with_gp(db_path):
+    ratings = db.query(
+        "SELECT * FROM team_ratings ORDER BY elo DESC", db_path=db_path
+    )
+    gp = _games_played(db_path)
+    for r in ratings:
+        r["games_played"] = gp.get(r["team"], 0)
+    return ratings
 
 
 def _by_market(db_path):
