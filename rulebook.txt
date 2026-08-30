@@ -1,1 +1,16 @@
-Add two new fields to gut calls: home_subject and away_subject. Auto-populate both from the fixture's home_team and away_team at the time the gut call is logged — no manual input, no dropdown. Store alongside existing note/tag fields. Display in History/GC as: note text (home_subject), note text (away_subject) — e.g. home lock (Man Utd), away wildcard (Newcastle). No change to By Note table aggregation — it still keys off the raw note string only. No new UI element needed since it's auto-filled from data already present on the fixture.
+1. system uses 1x2 only
+
+2. GW2
+Tags
+Pattern = generalizable heuristic (home fortress, rivalry history).
+Deep = fixture-specific reasoning (form, news, conviction-vs-hope).
+
+3. GW2
+Notes
+Home nets = passive assumption, home team scores.
+Home lock = asserted conviction, home team scores.
+Away wildcard = near-certain away scores, unsure how (~≥0.70).
+Away hope = genuine uncertainty, hoping not believing (~0.50).
+
+4. GW2
+By Subject: note phrases tracked per team (e.g. "Man Utd — home lock"), split at the comma. Separate from the By Note aggregate.
