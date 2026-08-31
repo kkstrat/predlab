@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap');
+
 * {
   box-sizing: border-box;
 }
@@ -17,9 +19,14 @@
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: #0f141a;
-  color: #e6ebf1;
+  font-family: var(--pl-font-body);
+  background: var(--pl-bg);
+  color: var(--pl-text);
+}
+
+#root {
+  min-height: 100vh;
+  background: var(--pl-bg);
 }
 
 .app-shell {
@@ -33,33 +40,65 @@ body {
   align-items: center;
   gap: 20px;
   padding: 16px 0;
-  border-bottom: 1px solid #26303c;
+  border-bottom: 1px solid var(--pl-hairline);
   margin-bottom: 24px;
+  flex-wrap: wrap;
 }
 
 .brand {
+  font-family: var(--pl-font-display);
   font-weight: 700;
   font-size: 18px;
-  color: #55aaff;
+  color: var(--pl-text);
+  margin-right: 8px;
 }
 
-a {
-  color: #9fb3c8;
+.topnav a {
+  position: relative;
+  color: var(--pl-text-muted);
   text-decoration: none;
+  padding: 8px 0 10px;
+  font-family: var(--pl-font-body);
+  font-size: 14px;
+  letter-spacing: 0.2px;
+  transition: color 0.12s ease;
 }
 
-a.active {
-  color: #fff;
+.topnav a:hover {
+  color: var(--pl-text);
+}
+
+.topnav a.active {
+  color: var(--pl-text);
   font-weight: 600;
 }
 
-h1 { font-size: 20px; }
-h2 { font-size: 16px; }
+.topnav a.active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--pl-model);
+}
+
+h1 {
+  font-family: var(--pl-font-display);
+  font-size: 20px;
+  margin: 0 0 16px;
+}
+
+h2 {
+  font-family: var(--pl-font-display);
+  font-size: 16px;
+  margin-top: 0;
+}
 
 .card {
-  background: #171e27;
-  border: 1px solid #26303c;
-  border-radius: 8px;
+  background: var(--pl-panel);
+  border: 1px solid var(--pl-hairline);
+  border-radius: 0;
   padding: 16px;
   margin-bottom: 16px;
 }
@@ -97,10 +136,23 @@ table {
 th, td {
   text-align: left;
   padding: 8px 10px;
-  border-bottom: 1px solid #1f2832;
+  border-bottom: 1px solid var(--pl-hairline);
+  color: var(--pl-text);
+  font-family: var(--pl-font-mono);
 }
 
-th { color: #9fb3c8; font-weight: 500; }
+th {
+  color: var(--pl-text-muted);
+  font-weight: 500;
+  font-family: var(--pl-font-body);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 11px;
+}
+
+tr:last-child td {
+  border-bottom: none;
+}
 
 select, input, button {
   background: #1d2733;
@@ -130,6 +182,8 @@ button.primary { background: #255; }
 .metric {
   font-size: 22px;
   font-weight: 700;
+  color: var(--pl-text);
+  font-family: var(--pl-font-mono);
 }
 
 .quick-form {
@@ -164,18 +218,23 @@ button.primary { background: #255; }
   margin: 24px 0 12px;
   font-size: 15px;
   font-weight: 600;
-  color: #55aaff;
+  color: var(--pl-text);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  border: none;
-  border-bottom: 1px solid #26303c;
-  background: transparent;
-  padding: 0 0 6px;
+  border: 1px solid var(--pl-hairline);
+  background: var(--pl-panel);
+  padding: 12px 14px;
   text-align: left;
   display: flex;
   justify-content: space-between;
   align-items: center;
   cursor: pointer;
+  font-family: var(--pl-font-display);
+  transition: border-color 0.12s ease;
+}
+
+.gw-header:hover {
+  border-color: #3a4650;
 }
 
 .gw-header:first-of-type {
@@ -183,7 +242,7 @@ button.primary { background: #255; }
 }
 
 .gw-toggle {
-  font-family: inherit;
+  font-family: var(--pl-font-display);
 }
 
 /* ---- Home / landing page ---- */
@@ -262,6 +321,14 @@ button.primary { background: #255; }
 
 .pl-tile:hover {
   border-color: #3a4650;
+}
+
+.pl-model {
+  color: var(--pl-model);
+}
+
+.pl-gut {
+  color: var(--pl-gut);
 }
 
 .pl-tile-name {

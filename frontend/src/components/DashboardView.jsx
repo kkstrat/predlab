@@ -43,7 +43,7 @@ export default function DashboardView() {
           <h2>Brier trend</h2>
           {stats.scores_over_time.length === 0 && <p className="muted">No scored predictions yet.</p>}
           {stats.scores_over_time.map((row) => (
-            <div key={row.day} className="muted">
+            <div key={row.day} className="muted" style={{ fontFamily: 'var(--pl-font-mono)' }}>
               {row.day}: model {row.model_brier?.toFixed(3)} · final {row.final_brier?.toFixed(3)}
             </div>
           ))}
@@ -51,7 +51,7 @@ export default function DashboardView() {
 
         <div className="card">
           <h2>Gut call calibration</h2>
-          <table>
+          <table className="pl-table">
             <thead>
               <tr><th>Bucket</th><th>n</th><th>scored</th><th>Hits</th><th>Misses</th><th>hit rate</th><th>Brier</th></tr>
             </thead>
@@ -81,7 +81,7 @@ export default function DashboardView() {
       <div className="grid-2">
         <div className="card">
           <h2>By market</h2>
-          <table>
+          <table className="pl-table">
             <thead><tr><th>Market</th><th>n</th><th>model Brier</th><th>final Brier</th></tr></thead>
             <tbody>
               {stats.by_market.map((r) => (
@@ -98,7 +98,7 @@ export default function DashboardView() {
 
         <div className="card">
           <h2>By competition</h2>
-          <table>
+          <table className="pl-table">
             <thead><tr><th>Competition</th><th>n</th><th>final Brier</th></tr></thead>
             <tbody>
               {stats.by_competition.map((r) => (
@@ -116,7 +116,7 @@ export default function DashboardView() {
       {stats.team_ratings.length > 0 && (
         <div className="card">
           <h2>Team ratings (Elo)</h2>
-          <table>
+          <table className="pl-table">
             <thead><tr><th>Rank</th><th>Team</th><th>GP</th><th>Elo</th><th>GF/gm</th><th>GA/gm</th></tr></thead>
             <tbody>
               {stats.team_ratings.map((r, i) => (

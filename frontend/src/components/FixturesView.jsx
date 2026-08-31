@@ -135,7 +135,7 @@ function FixtureCard({ fixture, onChanged, onError }) {
         <span className="status">{utcLocal(fixture.date_utc)}</span>
         <span className="team" style={{ textAlign: 'right' }}>{fixture.away_team}</span>
       </div>
-      <div className="muted">
+      <div className="muted" style={{ marginBottom: 8 }}>
         {fixture.competition}
         {fixture.is_friendly ? ' • friendly' : ''} •{' '}
         <span className={fixture.status === 'friendly' ? 'status friendly' : 'status'}>
@@ -145,11 +145,12 @@ function FixtureCard({ fixture, onChanged, onError }) {
 
       {models.map((m) => (
         <div key={m.model_version} className="muted" style={{ marginTop: 8 }}>
-          <strong>{m.model_version}</strong>: home {m.probabilities['1X2'].home.toFixed(2)} · draw{' '}
-          {m.probabilities['1X2'].draw.toFixed(2)} · away{' '}
-          {m.probabilities['1X2'].away.toFixed(2)} · O2.5{' '}
-          {m.probabilities['OU_2.5'].over.toFixed(2)} · BTTS yes{' '}
-          {m.probabilities.BTTS.yes.toFixed(2)}
+          <span className="pl-model" style={{ fontFamily: 'var(--pl-font-mono)' }}><strong>{m.model_version}</strong></span>: home {' '}
+          <span style={{ color: 'var(--pl-model)', fontFamily: 'var(--pl-font-mono)' }}>{m.probabilities['1X2'].home.toFixed(2)}</span> · draw{' '}
+          <span style={{ color: 'var(--pl-model)', fontFamily: 'var(--pl-font-mono)' }}>{m.probabilities['1X2'].draw.toFixed(2)}</span> · away{' '}
+          <span style={{ color: 'var(--pl-model)', fontFamily: 'var(--pl-font-mono)' }}>{m.probabilities['1X2'].away.toFixed(2)}</span> · O2.5{' '}
+          <span style={{ color: 'var(--pl-model)', fontFamily: 'var(--pl-font-mono)' }}>{m.probabilities['OU_2.5'].over.toFixed(2)}</span> · BTTS yes{' '}
+          <span style={{ color: 'var(--pl-model)', fontFamily: 'var(--pl-font-mono)' }}>{m.probabilities.BTTS.yes.toFixed(2)}</span>
         </div>
       ))}
 
@@ -157,8 +158,8 @@ function FixtureCard({ fixture, onChanged, onError }) {
         <div className="muted" style={{ marginTop: 10 }}>
           {loggedPredictions.map((p) => (
             <div key={p.id}>
-              ✔ prediction logged — {p.market} {p.selection} @ {p.final_probability.toFixed(2)}
-              {' '}({p.adjustment_source}, model said {p.model_probability.toFixed(2)})
+              ✔ prediction logged — {p.market} {p.selection} @ <span style={{ color: 'var(--pl-model)', fontFamily: 'var(--pl-font-mono)' }}>{p.final_probability.toFixed(2)}</span>
+              {' '}({p.adjustment_source}, model said <span style={{ color: 'var(--pl-model)', fontFamily: 'var(--pl-font-mono)' }}>{p.model_probability.toFixed(2)}</span>)
               {p.brier_score != null && ` · scored, Brier ${p.brier_score.toFixed(3)}`}
             </div>
           ))}
@@ -191,7 +192,7 @@ function FixtureCard({ fixture, onChanged, onError }) {
         <div className="muted" style={{ marginTop: 8 }}>
           {loggedGutCalls.map((g) => (
             <div key={g.id}>
-              ✔ gut call logged — {g.market} {g.selection} @ {g.probability.toFixed(2)}
+              ✔ gut call logged — {g.market} {g.selection} @ <span style={{ color: 'var(--pl-gut)', fontFamily: 'var(--pl-font-mono)' }}>{g.probability.toFixed(2)}</span>
               {g.tag && ` · [${g.tag}]`}
               {g.note && ` · "${g.note}"`}
               {g.brier_score != null && ` · scored, Brier ${g.brier_score.toFixed(3)}`}

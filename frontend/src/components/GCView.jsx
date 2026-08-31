@@ -14,7 +14,7 @@ function CalTable({ rows, noteMode, subjectMode }) {
       ? (r) => r.note
       : (r) => r.tag;
   return (
-    <table>
+    <table className="pl-table">
       <thead>
         <tr>
           <th>{labelHeader}</th>
