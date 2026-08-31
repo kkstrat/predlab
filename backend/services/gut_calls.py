@@ -94,25 +94,38 @@ def note_record(note, db_path=None):
 
 def _by_subject(db_path):
     rows = db.query(
-        """SELECT g.note, g.home_subject, g.away_subject, s.brier_score
+        """SELECT g.note, g.home_subject, g.away_subject, s.brier_score,
+                  f.home_score, f.away_score
            FROM gut_calls g
            LEFT JOIN gut_call_scores s ON s.gut_call_id = g.id
+           LEFT JOIN fixtures f ON f.id = g.fixture_id
            WHERE g.note IS NOT NULL AND TRIM(g.note) != ''""",
         db_path=db_path,
     )
+
+    def half_hit(team_side, r):
+        """For comma-split halves, a hit means that specific team scored >=1.
+
+        The whole-call brier (which tests the combined BTTS result) is not a
+        per-team measure, so comma-split halves are judged per team and report
+        Brier as not-applicable, rather than inheriting the call's brier.
+        """
+        scored = r["away_score"] if team_side == "away" else r["home_score"]
+        return scored is not None and scored >= 1
+
     groups = {}
     for r in rows:
         note = r["note"]
         idx = note.find(",")
         if idx != -1:
             pairs = (
-                (r["home_subject"], note[:idx].strip()),
-                (r["away_subject"], note[idx + 1:].strip()),
+                (r["home_subject"], note[:idx].strip(), "home"),
+                (r["away_subject"], note[idx + 1:].strip(), "away"),
             )
         else:
             home = r["home_subject"] or r["away_subject"]
-            pairs = ((home, note.strip()),) if home else ()
-        for team, phrase in pairs:
+            pairs = ((home, note.strip(), "home"),) if home else ()
+        for team, phrase, side in pairs:
             if not team or not phrase:
                 continue
             key = (_normalize_note(team), _normalize_note(phrase))
@@ -120,6 +133,7 @@ def _by_subject(db_path):
                 "team": team,
                 "phrase": phrase,
                 "normalized": _normalize_note(phrase),
+                "comma_split": idx != -1,
                 "n": 0,
                 "scored": 0,
                 "hits": 0,
@@ -128,9 +142,14 @@ def _by_subject(db_path):
             group["n"] += 1
             if r["brier_score"] is not None:
                 group["scored"] += 1
-                group["briers"].append(r["brier_score"])
-                if r["brier_score"] < HIT_BRIER_THRESHOLD:
-                    group["hits"] += 1
+                if idx != -1:
+                    # Per-team judgement; no per-team brier was ever logged.
+                    if half_hit(side, r):
+                        group["hits"] += 1
+                else:
+                    if r["brier_score"] < HIT_BRIER_THRESHOLD:
+                        group["hits"] += 1
+                    group["briers"].append(r["brier_score"])
 
     out = []
     for g in groups.values():

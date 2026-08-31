@@ -159,6 +159,48 @@ class GutCallCalibrationTest(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertIsNone(resp.get_json())
 
+    def test_by_subject_comma_split_scores_per_team(self):
+        # Sunderland 1-0 Fulham: home scored, away didn't. A comma-split BTTS
+        # gut call must judge each half against that specific team's goals,
+        # and report Brier as not-applicable (no per-team probability logged).
+        db.execute(
+            """INSERT INTO fixtures (external_id, date_utc, home_team, away_team,
+                                     competition, is_friendly, status)
+               VALUES (?, ?, ?, ?, ?, ?, 'scheduled')""",
+            ("gc-3", "2099-01-10T15:00:00+00:00",
+             "Sunderland", "Fulham", "Friendly", 1),
+            db_path=self.db_path,
+        )
+        fid = db.query_one(
+            "SELECT id FROM fixtures WHERE external_id = 'gc-3'", db_path=self.db_path
+        )["id"]
+        self.client.post("/gut_calls", json={
+            "fixture_id": fid, "market": "BTTS", "selection": "no",
+            "probability": 0.75, "note": "home nets, away wildcard",
+        })
+        # Sudnerland 1-0 Fulham (BTTS "no" is a hit for the whole call, but the
+        # away phrase judged against Fulham's goals should be a miss).
+        self.client.post(f"/fixtures/{fid}/score", json={"home_score": 1, "away_score": 0})
+
+        resp = self.client.get("/gut_calls/calibration")
+        by_key = {(r["team"], r["normalized"]): r for r in resp.get_json()["by_subject"]}
+
+        home = by_key[("Sunderland", "home nets")]
+        away = by_key[("Fulham", "away wildcard")]
+        # Both halves are graded.
+        self.assertEqual(home["n"], 1)
+        self.assertEqual(home["scored"], 1)
+        self.assertEqual(away["n"], 1)
+        self.assertEqual(away["scored"], 1)
+        # Home scored >=1 -> hit; away scored 0 -> miss.
+        self.assertEqual(home["hits"], 1)
+        self.assertEqual(home["hit_rate"], 1.0)
+        self.assertEqual(away["hits"], 0)
+        self.assertEqual(away["hit_rate"], 0.0)
+        # No per-team brier exists -> displayed as not-applicable.
+        self.assertIsNone(home["brier"])
+        self.assertIsNone(away["brier"])
+
 
 if __name__ == "__main__":
     unittest.main()
