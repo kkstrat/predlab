@@ -160,18 +160,30 @@ button.primary { background: #255; }
 }
 
 .gw-header {
+  width: 100%;
   margin: 24px 0 12px;
   font-size: 15px;
   font-weight: 600;
   color: #55aaff;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  border: none;
   border-bottom: 1px solid #26303c;
-  padding-bottom: 6px;
+  background: transparent;
+  padding: 0 0 6px;
+  text-align: left;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
 }
 
 .gw-header:first-of-type {
   margin-top: 8px;
+}
+
+.gw-toggle {
+  font-family: inherit;
 }
 
 /* ---- Home / landing page ---- */

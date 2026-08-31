@@ -53,18 +53,26 @@ export default function DashboardView() {
           <h2>Gut call calibration</h2>
           <table>
             <thead>
-              <tr><th>Bucket</th><th>n</th><th>scored</th><th>hit rate</th><th>Brier</th></tr>
+              <tr><th>Bucket</th><th>n</th><th>scored</th><th>Hits</th><th>Misses</th><th>hit rate</th><th>Brier</th></tr>
             </thead>
             <tbody>
-              {stats.gut_calibration.map((r) => (
-                <tr key={r.probability}>
-                  <td>{r.probability}</td>
-                  <td>{r.n}</td>
-                  <td>{r.scored}</td>
-                  <td>{r.hit_rate ?? '—'}</td>
-                  <td>{r.brier != null ? r.brier.toFixed(3) : '—'}</td>
-                </tr>
-              ))}
+              {stats.gut_calibration.map((r) => {
+                const hits = r.scored != null && r.hit_rate != null
+                  ? Math.round(Number(r.hit_rate) * Number(r.scored))
+                  : 0;
+                const misses = (r.scored ?? 0) - hits;
+                return (
+                  <tr key={r.probability}>
+                    <td>{r.probability}</td>
+                    <td>{r.n}</td>
+                    <td>{r.scored}</td>
+                    <td>{hits}</td>
+                    <td>{misses}</td>
+                    <td>{r.hit_rate ?? '—'}</td>
+                    <td>{r.brier != null ? r.brier.toFixed(3) : '—'}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

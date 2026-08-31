@@ -21,6 +21,7 @@ function CalTable({ rows, noteMode, subjectMode }) {
           <th>n</th>
           <th>scored</th>
           <th>hits</th>
+          <th>misses</th>
           <th>hit rate</th>
           <th>Brier</th>
         </tr>
@@ -32,12 +33,13 @@ function CalTable({ rows, noteMode, subjectMode }) {
             <td>{r.n}</td>
             <td>{r.scored}</td>
             <td>{r.hits}</td>
+            <td>{Math.max((r.scored ?? 0) - (r.hits ?? 0), 0)}</td>
             <td>{r.hit_rate ?? '—'}</td>
             <td>{r.brier != null ? r.brier.toFixed(3) : '—'}</td>
           </tr>
         ))}
         {rows.length === 0 && (
-          <tr><td colSpan={6} className="muted">No {noteMode ? 'notes' : subjectMode ? 'subject-paired' : 'tagged'} gut calls yet.</td></tr>
+          <tr><td colSpan={7} className="muted">No {noteMode ? 'notes' : subjectMode ? 'subject-paired' : 'tagged'} gut calls yet.</td></tr>
         )}
       </tbody>
     </table>

@@ -24,6 +24,13 @@ export function homeHeroMetrics({ totals = {} } = {}) {
   ];
 }
 
+export function getDefaultExpandedState(gameweeks = [], prevState = {}) {
+  return gameweeks.reduce((acc, gw) => {
+    acc[gw] = Boolean(prevState[gw]);
+    return acc;
+  }, {});
+}
+
 export function buildBrierTrace(history = [], lastN = 8) {
   const weeks = new Map();
   for (const f of history) {

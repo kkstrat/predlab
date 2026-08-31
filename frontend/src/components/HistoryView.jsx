@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { getFixturesHistory, utcLocal } from '../api.js';
 import { formatGutNote } from '../gutNote.js';
+import { getDefaultExpandedState } from '../home.js';
 
 function fmt(n, digits = 2) {
   return n == null ? '—' : Number(n).toFixed(digits);
@@ -63,10 +64,17 @@ export default function HistoryView() {
 
   useEffect(() => { load(); }, []);
 
-  const groups = history.reduce((acc, f) => {
+  const groups = useMemo(() => history.reduce((acc, f) => {
     (acc[f.gameweek] = acc[f.gameweek] || []).push(f);
     return acc;
-  }, {});
+  }, {}), [history]);
+
+  const gameweeks = Object.keys(groups);
+  const [expanded, setExpanded] = useState({});
+
+  useEffect(() => {
+    setExpanded((prev) => getDefaultExpandedState(gameweeks, prev));
+  }, [gameweeks]);
 
   return (
     <div>
@@ -75,12 +83,25 @@ export default function HistoryView() {
       {history.length === 0 && (
         <p className="muted">No fixtures scored yet. Once you enter a result on the Fixtures page, it shows up here.</p>
       )}
-      {Object.entries(groups).map(([gw, fixtures]) => (
-        <div key={gw}>
-          <h2 className="gw-header">{gw}</h2>
-          {fixtures.map((f) => <HistoryCard key={f.id} fixture={f} />)}
-        </div>
-      ))}
+      {gameweeks.map((gw) => {
+        const fixtures = groups[gw];
+        const isOpen = !!expanded[gw];
+
+        return (
+          <div key={gw}>
+            <button
+              type="button"
+              className="gw-header gw-toggle"
+              aria-expanded={isOpen}
+              onClick={() => setExpanded((prev) => ({ ...prev, [gw]: !prev[gw] }))}
+            >
+              <span>{gw}</span>
+              <span aria-hidden="true">{isOpen ? '▾' : '▸'}</span>
+            </button>
+            {isOpen && fixtures.map((f) => <HistoryCard key={f.id} fixture={f} />)}
+          </div>
+        );
+      })}
     </div>
   );
 }

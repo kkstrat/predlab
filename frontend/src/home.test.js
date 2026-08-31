@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   TILES, buildBrierTrace, currentGameweekLabel, sectionStatuses, fmtBrier, homeHeroMetrics,
+  getDefaultExpandedState,
 } from './home.js';
 
 test('TILES link to the four existing routes in nav order', () => {
@@ -123,6 +124,11 @@ test('homeHeroMetrics uses the exact dashboard totals for model, final, and gut 
     ['FINAL', '0.188'],
     ['GUT', '0.247'],
   ]);
+});
+
+test('History accordion defaults to closed unless a prior state already opened a week', () => {
+  assert.deepEqual(getDefaultExpandedState(['GW1', 'GW2'], {}), { GW1: false, GW2: false });
+  assert.deepEqual(getDefaultExpandedState(['GW1', 'GW2'], { GW2: true }), { GW1: false, GW2: true });
 });
 
 test('fmtBrier renders missing values as an em dash', () => {
