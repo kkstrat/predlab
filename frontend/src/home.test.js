@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  TILES, buildBrierTrace, currentGameweekLabel, sectionStatuses, fmtBrier,
+  TILES, buildBrierTrace, currentGameweekLabel, sectionStatuses, fmtBrier, homeHeroMetrics,
 } from './home.js';
 
 test('TILES link to the four existing routes in nav order', () => {
@@ -38,6 +38,24 @@ test('buildBrierTrace aggregates model/gut brier per gameweek', () => {
   const gw2 = trace[1];
   assert.equal(gw2.model, 0.6);
   assert.equal(gw2.gut, null); // no scored gut call that week
+});
+
+test('buildBrierTrace includes model, final, and gut weekly averages', () => {
+  const history = [{
+    gameweek: 'GW1',
+    date_utc: '2026-08-21T19:00:00+00:00',
+    predictions: [
+      { model_brier_score: 0.2, brier_score: 0.3 },
+      { model_brier_score: 0.4, brier_score: 0.6 },
+    ],
+    gut_calls: [{ brier_score: 0.5 }],
+  }];
+
+  const trace = buildBrierTrace(history);
+  assert.equal(trace.length, 1);
+  assert.ok(Math.abs(trace[0].model - 0.3) < 1e-9);
+  assert.ok(Math.abs(trace[0].final - 0.45) < 1e-9);
+  assert.ok(Math.abs(trace[0].gut - 0.5) < 1e-9);
 });
 
 test('buildBrierTrace keeps the last N gameweeks, numeric order', () => {
@@ -93,6 +111,18 @@ test('sectionStatuses renders one-line statuses', () => {
   assert.equal(status.history, '2 gameweeks logged');
   assert.equal(status.dashboard, 'MODEL 0.250 · FINAL 0.200');
   assert.equal(status.gc, '1 tags · 2 notes · 1 subjects');
+});
+
+test('homeHeroMetrics uses the exact dashboard totals for model, final, and gut Brier averages', () => {
+  const metrics = homeHeroMetrics({
+    totals: { model_brier: 0.2111, final_brier: 0.1875, gut_brier: 0.2468 },
+  });
+
+  assert.deepEqual(metrics.map((m) => [m.label, m.value]), [
+    ['MODEL', '0.211'],
+    ['FINAL', '0.188'],
+    ['GUT', '0.247'],
+  ]);
 });
 
 test('fmtBrier renders missing values as an em dash', () => {

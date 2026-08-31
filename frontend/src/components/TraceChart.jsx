@@ -31,13 +31,14 @@ export default function TraceChart({ points }) {
     <svg
       viewBox={`0 0 ${W} ${H}`}
       role="img"
-      aria-label="Model and gut Brier trend by gameweek"
+      aria-label="Model, final, and gut Brier trend by gameweek"
       style={{ width: '100%', height: 'auto', display: 'block' }}
     >
       {GRID.map((g) => (
         <line key={g} x1={PAD_L} x2={W - PAD_R} y1={y(g)} y2={y(g)} stroke="var(--pl-hairline)" strokeWidth="1" />
       ))}
       <polyline points={linePoints('model')} fill="none" stroke="var(--pl-model)" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
+      <polyline points={linePoints('final')} fill="none" stroke="var(--pl-text)" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
       <polyline points={linePoints('gut')} fill="none" stroke="var(--pl-gut)" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
       <text x={PAD_L} y={H - 8} fill="var(--pl-text-muted)" fontSize="10" fontFamily="'IBM Plex Mono', monospace">
         {shortDate(points[0].date)}

@@ -3,7 +3,9 @@ import { Link } from 'react-router-dom';
 import {
   getFixtures, getFixturesHistory, getDashboardStats, getGutCallCalibration,
 } from '../api.js';
-import { buildBrierTrace, currentGameweekLabel, fmtBrier, sectionStatuses, TILES } from '../home.js';
+import {
+  buildBrierTrace, currentGameweekLabel, homeHeroMetrics, sectionStatuses, TILES,
+} from '../home.js';
 import TraceChart from './TraceChart.jsx';
 
 export default function HomeView() {
@@ -28,7 +30,7 @@ export default function HomeView() {
   const currentGW = currentGameweekLabel(upcoming, history);
   const statuses = sectionStatuses({ upcoming, history, totals, calibration });
   const trace = buildBrierTrace(history);
-  const last = trace[trace.length - 1];
+  const heroMetrics = homeHeroMetrics(totals);
 
   return (
     <div className="home">
@@ -39,8 +41,11 @@ export default function HomeView() {
 
       <section className="pl-panel pl-trace">
         <div className="pl-trace-readouts">
-          <span style={{ color: 'var(--pl-model)' }}>MODEL — {fmtBrier(last && last.model)}</span>
-          <span style={{ color: 'var(--pl-gut)' }}>GUT — {fmtBrier(last && last.gut)}</span>
+          {heroMetrics.map((metric) => (
+            <span key={metric.label} style={{ color: metric.color }}>
+              {metric.label} — {metric.value}
+            </span>
+          ))}
         </div>
         <TraceChart points={trace} />
       </section>
