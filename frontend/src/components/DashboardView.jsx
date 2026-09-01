@@ -44,7 +44,7 @@ export default function DashboardView() {
           {stats.scores_over_time.length === 0 && <p className="muted">No scored predictions yet.</p>}
           {stats.scores_over_time.map((row) => (
             <div key={row.day} className="muted" style={{ fontFamily: 'var(--pl-font-mono)' }}>
-              {row.day}: model {row.model_brier?.toFixed(3)} · final {row.final_brier?.toFixed(3)}
+              {row.day}: model {row.model_brier != null ? row.model_brier.toFixed(3) : '—'} · final {row.final_brier != null ? row.final_brier.toFixed(3) : '—'} · gut {row.gut_brier != null ? row.gut_brier.toFixed(3) : '—'}
             </div>
           ))}
         </div>

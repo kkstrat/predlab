@@ -271,6 +271,30 @@ class PredLabTestCase(unittest.TestCase):
         self.assertEqual(_gameweek_label("t-1"), "t-1")
         self.assertEqual(_gameweek_label(None), "Other")
 
+    def test_dashboard_daily_trend_includes_gut_brier(self):
+        self.client.post("/predictions", json={
+            "fixture_id": self.fixture_id,
+            "market": "1X2",
+            "selection": "home",
+            "model_probability": 0.6,
+            "final_probability": 0.7,
+            "adjustment_source": "model_only",
+        })
+        self.client.post("/gut_calls", json={
+            "fixture_id": self.fixture_id,
+            "market": "1X2",
+            "selection": "home",
+            "probability": 0.75,
+        })
+        self.client.post(f"/fixtures/{self.fixture_id}/score", json={"home_score": 2, "away_score": 1})
+
+        dash = self.client.get("/dashboard/stats").get_json()
+        row = next(r for r in dash["scores_over_time"] if r["day"] == "2099-01-01")
+
+        self.assertIsNotNone(row["model_brier"])
+        self.assertIsNotNone(row["final_brier"])
+        self.assertIsNotNone(row["gut_brier"])
+
 
 if __name__ == "__main__":
     unittest.main()

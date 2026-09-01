@@ -432,7 +432,7 @@ def _gut_calibration(db_path):
 
 
 def _brier_over_time(db_path):
-    return db.query(
+    pred_rows = db.query(
         """SELECT DATE(f.date_utc) AS day,
                   AVG(s.model_brier_score) AS model_brier,
                   AVG(s.brier_score) AS final_brier
@@ -440,7 +440,44 @@ def _brier_over_time(db_path):
            JOIN predictions p ON p.id = s.prediction_id
            JOIN fixtures f ON f.id = p.fixture_id
            GROUP BY DATE(f.date_utc)
-           ORDER BY day ASC""", db_path=db_path)
+           ORDER BY day ASC""",
+        db_path=db_path,
+    )
+    gut_rows = db.query(
+        """SELECT DATE(f.date_utc) AS day,
+                  AVG(gs.brier_score) AS gut_brier
+           FROM gut_call_scores gs
+           JOIN gut_calls g ON g.id = gs.gut_call_id
+           JOIN fixtures f ON f.id = g.fixture_id
+           GROUP BY DATE(f.date_utc)
+           ORDER BY day ASC""",
+        db_path=db_path,
+    )
+
+    gut_by_day = {r["day"]: r["gut_brier"] for r in gut_rows}
+    rows = []
+    for row in pred_rows:
+        day = row["day"]
+        rows.append({
+            "day": day,
+            "model_brier": row["model_brier"],
+            "final_brier": row["final_brier"],
+            "gut_brier": gut_by_day.get(day),
+        })
+
+    # Keep a day with gut scores but no predictions if the gut-only view is relevant.
+    for row in gut_rows:
+        day = row["day"]
+        if any(r["day"] == day for r in rows):
+            continue
+        rows.append({
+            "day": day,
+            "model_brier": None,
+            "final_brier": None,
+            "gut_brier": row["gut_brier"],
+        })
+
+    return sorted(rows, key=lambda r: r["day"])
 
 
 app = None
