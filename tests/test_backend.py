@@ -271,6 +271,32 @@ class PredLabTestCase(unittest.TestCase):
         self.assertEqual(_gameweek_label("t-1"), "t-1")
         self.assertEqual(_gameweek_label(None), "Other")
 
+    def test_seed_gw3_adds_real_fixtures_and_model_predictions_only(self):
+        import seed_gw3
+
+        n = seed_gw3.load_gw3(db_path=self.db_path)
+        self.assertEqual(n, 10)
+
+        fixture_rows = db.query(
+            "SELECT external_id, home_team, away_team FROM fixtures WHERE external_id LIKE 'gw3-%' ORDER BY external_id",
+            db_path=self.db_path,
+        )
+        self.assertEqual(len(fixture_rows), 10)
+        self.assertEqual(fixture_rows[0]["home_team"], "Ipswich Town")
+        self.assertEqual(fixture_rows[0]["away_team"], "Liverpool")
+
+        pred_rows = db.query(
+            "SELECT * FROM predictions WHERE fixture_id IN (SELECT id FROM fixtures WHERE external_id LIKE 'gw3-%')",
+            db_path=self.db_path,
+        )
+        gut_rows = db.query(
+            "SELECT * FROM gut_calls WHERE fixture_id IN (SELECT id FROM fixtures WHERE external_id LIKE 'gw3-%')",
+            db_path=self.db_path,
+        )
+        self.assertEqual(len(pred_rows), 10)
+        self.assertEqual(len(gut_rows), 0)
+        self.assertTrue(all(r["model_version"] == "elo_poisson_v1" for r in pred_rows))
+
     def test_dashboard_daily_trend_includes_gut_brier(self):
         self.client.post("/predictions", json={
             "fixture_id": self.fixture_id,
