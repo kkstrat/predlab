@@ -4,6 +4,7 @@ import {
   TILES, buildBrierTrace, currentGameweekLabel, sectionStatuses, fmtBrier, homeHeroMetrics,
   getDefaultExpandedState,
 } from './home.js';
+import { utcLocal } from './api.js';
 
 test('TILES link to the four existing routes in nav order', () => {
   assert.deepEqual(TILES.map((t) => [t.key, t.path]), [
@@ -134,4 +135,34 @@ test('History accordion defaults to closed unless a prior state already opened a
 test('fmtBrier renders missing values as an em dash', () => {
   assert.equal(fmtBrier(null), '—');
   assert.equal(fmtBrier(0.2555), '0.256');
+});
+
+test('utcLocal converts stored UTC fixtures to East Africa Time', () => {
+  const value = utcLocal('2026-08-22T11:30:00+00:00');
+  const expected = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Africa/Nairobi',
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(new Date('2026-08-22T11:30:00+00:00'));
+
+  assert.equal(value, expected);
+});
+
+test('utcLocal treats naive timestamps as UTC before converting to East Africa Time', () => {
+  const value = utcLocal('2026-09-04T19:00:00');
+  const expected = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Africa/Nairobi',
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(new Date('2026-09-04T19:00:00Z'));
+
+  assert.equal(value, expected);
 });

@@ -62,6 +62,21 @@ export async function getGutCallNoteRecord(note) {
 
 export function utcLocal(iso) {
   if (!iso) return '';
-  const d = new Date(iso);
-  return isNaN(d) ? iso : d.toLocaleString();
+
+  const normalized = /^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]+)?$/.test(iso)
+    ? `${iso}Z`
+    : iso;
+
+  const d = new Date(normalized);
+  if (Number.isNaN(d.getTime())) return iso;
+
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Africa/Nairobi',
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(d);
 }

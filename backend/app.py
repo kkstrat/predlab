@@ -4,6 +4,7 @@ Immutability rule: predictions and gut_calls are insert-only. There is NO
 PUT/PATCH/DELETE route for either resource — enforced here at the API layer.
 """
 
+import sqlite3
 from datetime import datetime, timezone
 
 from flask import Flask, jsonify, request
@@ -202,8 +203,12 @@ def _register_routes(app):
             return jsonify({"error": "probability must be one of {0.95, 0.75, 0.50}"}), 400
         if not _valid_selection(data["market"], data["selection"]):
             return jsonify({"error": "invalid market/selection"}), 400
-        if data.get("tag") not in ALLOWED_GUT_TAGS:
+
+        tag = (data.get("tag") or "").strip() or None
+        if tag not in ALLOWED_GUT_TAGS:
             return jsonify({"error": "invalid gut call tag"}), 400
+
+        note = (data.get("note") or "").strip() or None
 
         created_at = data.get("created_at") or _now_iso()
         fixture = _get_fixture(db_path, data["fixture_id"])
@@ -211,15 +216,50 @@ def _register_routes(app):
         if error:
             return jsonify({"error": error}), 400
 
-        gut_id = db.execute(
-            """INSERT INTO gut_calls (fixture_id, market, selection, probability, note, tag,
-                                      home_subject, away_subject, created_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (fixture["id"], data["market"], data["selection"], probability,
-             data.get("note"), data.get("tag"), fixture["home_team"], fixture["away_team"],
-             created_at),
+        existing = db.query_one(
+            """SELECT id FROM gut_calls
+               WHERE fixture_id = ?
+                 AND market = ?
+                 AND selection = ?
+                 AND probability = ?
+                 AND COALESCE(TRIM(note), '') = COALESCE(TRIM(?), '')
+                 AND COALESCE(TRIM(tag), '') = COALESCE(TRIM(?), '')
+               ORDER BY id DESC LIMIT 1""",
+            (fixture["id"], data["market"], data["selection"], probability, note, tag),
             db_path=db_path,
         )
+        if existing:
+            return jsonify(_get_gut_call(db_path, existing["id"])), 200
+
+        try:
+            gut_id = db.execute(
+                """INSERT INTO gut_calls (fixture_id, market, selection, probability, note, tag,
+                                          home_subject, away_subject, created_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (fixture["id"], data["market"], data["selection"], probability,
+                 note, tag, fixture["home_team"], fixture["away_team"],
+                 created_at),
+                db_path=db_path,
+            )
+        except sqlite3.IntegrityError:
+            # Race backstop: the unique index rejected an identical duplicate
+            # that slipped between the pre-check above and this insert. Return
+            # the existing row unchanged (idempotent), matching the 200 above.
+            existing = db.query_one(
+                """SELECT id FROM gut_calls
+                   WHERE fixture_id = ?
+                     AND market = ?
+                     AND selection = ?
+                     AND probability = ?
+                     AND COALESCE(TRIM(note), '') = COALESCE(TRIM(?), '')
+                     AND COALESCE(TRIM(tag), '') = COALESCE(TRIM(?), '')
+                   ORDER BY id DESC LIMIT 1""",
+                (fixture["id"], data["market"], data["selection"], probability, note, tag),
+                db_path=db_path,
+            )
+            if existing:
+                return jsonify(_get_gut_call(db_path, existing["id"])), 200
+            raise
         return jsonify(_get_gut_call(db_path, gut_id)), 201
 
     # ---------------- Read-only views of what's locked in ----------------

@@ -83,3 +83,9 @@ CREATE TABLE IF NOT EXISTS team_ratings (
 CREATE INDEX IF NOT EXISTS idx_odds_fixture ON odds_snapshots(fixture_id, market);
 CREATE INDEX IF NOT EXISTS idx_pred_fixture ON predictions(fixture_id, market);
 CREATE INDEX IF NOT EXISTS idx_gut_fixture ON gut_calls(fixture_id, market);
+-- Rejects identical duplicate gut-call submissions at the DB level. Mirrors the
+-- app-level identity check (fixture_id, market, selection, probability and the
+-- trimmed/None-#normalized note + tag); COALESCE keeps NULL note/tag rows unique-safe.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_gut_calls_unique
+ON gut_calls(fixture_id, market, selection, probability,
+             COALESCE(TRIM(note), ''), COALESCE(TRIM(tag), ''));

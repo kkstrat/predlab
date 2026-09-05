@@ -30,6 +30,7 @@ function FixtureCard({ fixture, onChanged, onError }) {
   const [loggedPredictions, setLoggedPredictions] = useState([]);
   const [loggedGutCalls, setLoggedGutCalls] = useState([]);
   const [noteRecord, setNoteRecord] = useState(null);
+  const [submittingGut, setSubmittingGut] = useState(false);
 
   const loadLogged = async () => {
     try {
@@ -112,6 +113,9 @@ function FixtureCard({ fixture, onChanged, onError }) {
 
   const submitGut = async (e) => {
     e.preventDefault();
+    if (submittingGut) return;
+
+    setSubmittingGut(true);
     try {
       await createGutCall({
         fixture_id: fixture.id,
@@ -125,6 +129,8 @@ function FixtureCard({ fixture, onChanged, onError }) {
       loadLogged();
     } catch (err) {
       onError(err?.response?.data?.error || err.message);
+    } finally {
+      setSubmittingGut(false);
     }
   };
 
@@ -229,7 +235,9 @@ function FixtureCard({ fixture, onChanged, onError }) {
               reused: n={noteRecord.n} · hit rate {noteRecord.hit_rate ?? '—'}
             </span>
           )}
-          <button type="submit">Log gut call</button>
+          <button type="submit" disabled={submittingGut}>
+            {submittingGut ? 'Logging…' : 'Log gut call'}
+          </button>
         </form>
       )}
 

@@ -1,6 +1,7 @@
 """PredLab backend smoke/integration tests using Flask test client and a temp DB."""
 
 import os
+import sqlite3
 import sys
 import tempfile
 import unittest
@@ -159,6 +160,48 @@ class PredLabTestCase(unittest.TestCase):
             "probability": 0.75, "note": "gut",
         })
         self.assertEqual(resp.status_code, 201)
+
+    def test_duplicate_gut_call_is_idempotent(self):
+        payload = {
+            "fixture_id": self.fixture_id,
+            "market": "BTTS",
+            "selection": "yes",
+            "probability": 0.75,
+            "note": "same call twice",
+            "tag": "pattern",
+        }
+        first = self.client.post("/gut_calls", json=payload)
+        second = self.client.post("/gut_calls", json=payload)
+        self.assertEqual(first.status_code, 201)
+        self.assertEqual(second.status_code, 200)
+        rows = db.query(
+            "SELECT * FROM gut_calls WHERE fixture_id = ? AND market = ? AND selection = ?",
+            (self.fixture_id, "BTTS", "yes"),
+            db_path=self.db_path,
+        )
+        self.assertEqual(len(rows), 1)
+
+    def test_db_unique_index_rejects_identical_duplicate_insert(self):
+        # DB-level backstop: an identical duplicate (same identity key as the
+        # route's dedup check) is rejected by the unique index even when the
+        # app-layer pre-check is bypassed (e.g. a concurrent double-submit).
+        self.client.post("/gut_calls", json={
+            "fixture_id": self.fixture_id, "market": "1X2", "selection": "home",
+            "probability": 0.75, "note": "dup note", "tag": "pattern",
+        })
+        with self.assertRaises(sqlite3.IntegrityError):
+            db.execute(
+                """INSERT INTO gut_calls (fixture_id, market, selection, probability, note, tag,
+                                          home_subject, away_subject, created_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (self.fixture_id, "1X2", "home", 0.75, "dup note", "pattern",
+                 "Arsenal", "Chelsea", "2099-01-01T10:00:00+00:00"),
+                db_path=self.db_path,
+            )
+        rows = db.query(
+            "SELECT * FROM gut_calls WHERE fixture_id = ?", (self.fixture_id,), db_path=self.db_path
+        )
+        self.assertEqual(len(rows), 1)
 
     def test_gut_call_with_tag(self):
         resp = self.client.post("/gut_calls", json={
