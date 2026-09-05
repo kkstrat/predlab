@@ -1,8 +1,8 @@
 """Load the real EPL 2026/27 Gameweek 3 fixtures, model predictions, and gut calls.
 
 Additive-only, matching the GW1/GW2 seed pattern. This script inserts fixtures
-for gw3-* only and logs one model prediction plus one gut call per fixture,
-without touching any existing rows for other gameweeks.
+for gw3-* only and logs model predictions for all three markets (1X2, O2.5,
+BTTS) per fixture, without touching any existing rows for other gameweeks.
 
 Run from the predlab root:
     python seed_gw3.py
@@ -37,43 +37,40 @@ def _created_at_before_kickoff(date_utc):
     return (dt - timedelta(days=1)).isoformat()
 
 
+MARKETS = ["1X2", "OU_2.5", "BTTS"]
+
+
 def _log_prediction(fixture, db_path=None):
-    existing = db.query_one(
-        "SELECT id FROM predictions WHERE fixture_id = ?", (fixture["id"],), db_path=db_path
-    )
-    if existing:
-        return
-
     pred = compute_model_prediction(fixture, db_path=db_path)
-    probs = pred["probabilities"]["1X2"]
-    selection = max(probs, key=probs.get)
     created_at = _created_at_before_kickoff(fixture["date_utc"])
-
-    db.execute(
-        """INSERT INTO predictions
-           (fixture_id, market, selection, model_probability, final_probability,
-            adjustment_source, reasoning, signal_type, model_version, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-        (
-            fixture["id"],
-            "1X2",
-            selection,
-            probs[selection],
-            probs[selection],
-            "model_only",
-            "auto-seeded for GW3",
-            None,
-            "elo_poisson_v1",
-            created_at,
-        ),
-        db_path=db_path,
-    )
+    logged = 0
+    for market in MARKETS:
+        probs = pred["probabilities"][market]
+        selection = max(probs, key=probs.get)
+        existing = db.query_one(
+            "SELECT id FROM predictions WHERE fixture_id = ? AND market = ?",
+            (fixture["id"], market), db_path=db_path,
+        )
+        if existing:
+            continue
+        db.execute(
+            """INSERT INTO predictions
+               (fixture_id, market, selection, model_probability, final_probability,
+                adjustment_source, reasoning, signal_type, model_version, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (fixture["id"], market, selection, probs[selection], probs[selection],
+             "model_only", "auto-seeded for GW3", None, "elo_poisson_v1", created_at),
+            db_path=db_path,
+        )
+        logged += 1
+    return logged
 
 
 def load_gw3(db_path=None):
     db.init_db(db_path)
 
     inserted = 0
+    preds_logged = 0
     for external_id, date_utc, home, away in GW3_FIXTURES:
         fixture = db.query_one(
             "SELECT * FROM fixtures WHERE external_id = ?", (external_id,), db_path=db_path
@@ -91,11 +88,13 @@ def load_gw3(db_path=None):
             )
             inserted += 1
 
-        _log_prediction(fixture, db_path=db_path)
+        preds_logged += _log_prediction(fixture, db_path=db_path)
 
-    return inserted
+    return {"fixtures_inserted": inserted, "predictions_logged": preds_logged}
 
 
 if __name__ == "__main__":
-    n = load_gw3()
-    print(f"Loaded {n} new GW3 fixtures. Model predictions and gut calls were logged for each fixture; existing data was left untouched.")
+    result = load_gw3()
+    print(f"Loaded {result['fixtures_inserted']} new GW3 fixtures, "
+          f"logged {result['predictions_logged']} prediction row(s) "
+          f"(3 markets per fixture; existing data was left untouched).")

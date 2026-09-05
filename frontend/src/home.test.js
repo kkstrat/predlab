@@ -60,6 +60,24 @@ test('buildBrierTrace includes model, final, and gut weekly averages', () => {
   assert.ok(Math.abs(trace[0].gut - 0.5) < 1e-9);
 });
 
+test('buildBrierTrace keeps 1X2 rows only across markets', () => {
+  const history = [{
+    gameweek: 'GW3',
+    date_utc: '2026-09-04T19:00:00+00:00',
+    predictions: [
+      { market: '1X2', model_brier_score: 0.2, brier_score: 0.3 },
+      { market: 'OU_2.5', model_brier_score: 0.9, brier_score: 0.95 },
+      { market: 'BTTS', model_brier_score: 0.8, brier_score: 0.85 },
+      { model_brier_score: 0.5, brier_score: 0.55 }, // pre-market era row: counts as 1X2
+    ],
+    gut_calls: [{ brier_score: 0.4 }],
+  }];
+  const trace = buildBrierTrace(history);
+  assert.equal(trace.length, 1);
+  assert.ok(Math.abs(trace[0].model - 0.35) < 1e-9); // only 0.2 and 0.5 counted
+  assert.ok(Math.abs(trace[0].final - 0.425) < 1e-9); // only 0.3 and 0.55 counted
+});
+
 test('buildBrierTrace keeps the last N gameweeks, numeric order', () => {
   const history = Array.from({ length: 12 }, (_, i) => ({
     gameweek: `GW${i + 1}`,

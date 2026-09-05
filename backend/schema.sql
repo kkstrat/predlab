@@ -81,7 +81,9 @@ CREATE TABLE IF NOT EXISTS team_ratings (
 );
 
 CREATE INDEX IF NOT EXISTS idx_odds_fixture ON odds_snapshots(fixture_id, market);
-CREATE INDEX IF NOT EXISTS idx_pred_fixture ON predictions(fixture_id, market);
+-- One prediction row per (fixture, market, model) per the 3-market logging model;
+-- this is the DB-level backstop against duplicate/multi-market collisions.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_pred_unique ON predictions(fixture_id, market, model_version);
 CREATE INDEX IF NOT EXISTS idx_gut_fixture ON gut_calls(fixture_id, market);
 -- Rejects identical duplicate gut-call submissions at the DB level. Mirrors the
 -- app-level identity check (fixture_id, market, selection, probability and the

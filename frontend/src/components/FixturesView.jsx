@@ -11,6 +11,15 @@ const SELECTIONS = {
   BTTS: ['yes', 'no'],
 };
 
+function maxSelection(probs) {
+  if (!probs) return null;
+  let best = null;
+  for (const [sel, prob] of Object.entries(probs)) {
+    if (best === null || prob > best.prob) best = { sel, prob };
+  }
+  return best ? best.sel : null;
+}
+
 function FixtureCard({ fixture, onChanged, onError }) {
   const [models, setModels] = useState([]);
   const [prediction, setPrediction] = useState({
@@ -31,6 +40,7 @@ function FixtureCard({ fixture, onChanged, onError }) {
   const [loggedGutCalls, setLoggedGutCalls] = useState([]);
   const [noteRecord, setNoteRecord] = useState(null);
   const [submittingGut, setSubmittingGut] = useState(false);
+  const [submittingPrediction, setSubmittingPrediction] = useState(false);
 
   const loadLogged = async () => {
     try {
@@ -80,20 +90,61 @@ function FixtureCard({ fixture, onChanged, onError }) {
 
   const submitPrediction = async (e) => {
     e.preventDefault();
+    if (submittingPrediction) return;
+    setSubmittingPrediction(true);
+
     const mp = models[0]?.probabilities?.[prediction.market]?.[prediction.selection];
+    // GW3 forward: log all three markets instead of just the form's one.
+    // 1X2 keeps the form's manual pick; O2.5 and BTTS take the model's
+    // favoured selection at the model probability (model_only). GW1/GW2 keep
+    // the single 1X2 row exactly as before.
+    const gwMatch = String(fixture.external_id || '').match(/gw(\d+)/i);
+    const useThreeMarkets = Boolean(gwMatch) && parseInt(gwMatch[1], 10) >= 3;
+
+    const base = {
+      fixture_id: fixture.id,
+      final_probability: Number(prediction.final_probability),
+    };
+
     try {
-      await createPrediction({
-        fixture_id: fixture.id,
-        market: prediction.market,
-        selection: prediction.selection,
-        model_probability: mp ?? prediction.final_probability,
-        final_probability: Number(prediction.final_probability),
-        adjustment_source: prediction.adjustment_source,
-      });
+      if (useThreeMarkets && models[0]?.probabilities) {
+        const probs = models[0].probabilities;
+        const payloads = MARKETS.map((market) => {
+          if (market === prediction.market) {
+            return {
+              ...base,
+              market,
+              selection: prediction.selection,
+              model_probability: probs[market]?.[prediction.selection] ?? Number(prediction.final_probability),
+              adjustment_source: prediction.adjustment_source,
+            };
+          }
+          const sel = maxSelection(probs[market]);
+          return {
+            ...base,
+            market,
+            selection: sel,
+            model_probability: probs[market][sel],
+            final_probability: probs[market][sel],
+            adjustment_source: 'model_only',
+          };
+        });
+        await Promise.all(payloads.map((p) => createPrediction(p)));
+      } else {
+        await createPrediction({
+          ...base,
+          market: prediction.market,
+          selection: prediction.selection,
+          model_probability: mp ?? Number(prediction.final_probability),
+          adjustment_source: prediction.adjustment_source,
+        });
+      }
       onChanged();
       loadLogged();
     } catch (err) {
       onError(err?.response?.data?.error || err.message);
+    } finally {
+      setSubmittingPrediction(false);
     }
   };
 
@@ -190,7 +241,9 @@ function FixtureCard({ fixture, onChanged, onError }) {
             <option value="model_only">model_only</option>
             <option value="blended">blended</option>
           </select>
-          <button type="submit" className="primary">Log prediction</button>
+          <button type="submit" className="primary" disabled={submittingPrediction}>
+            {submittingPrediction ? 'Logging…' : 'Log prediction'}
+          </button>
         </form>
       )}
 

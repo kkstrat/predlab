@@ -177,17 +177,32 @@ def _register_routes(app):
         if error:
             return jsonify({"error": error}), 400
 
-        prediction_id = db.execute(
-            """INSERT INTO predictions
-               (fixture_id, market, selection, model_probability, final_probability,
-                adjustment_source, reasoning, signal_type, model_version, created_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (fixture["id"], market, selection, data["model_probability"],
-             data["final_probability"], data["adjustment_source"],
-             data.get("reasoning"), data.get("signal_type"),
-             data.get("model_version", "elo_poisson_v1"), created_at),
-            db_path=db_path,
-        )
+        model_version = data.get("model_version", "elo_poisson_v1")
+        try:
+            prediction_id = db.execute(
+                """INSERT INTO predictions
+                   (fixture_id, market, selection, model_probability, final_probability,
+                    adjustment_source, reasoning, signal_type, model_version, created_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (fixture["id"], market, selection, data["model_probability"],
+                 data["final_probability"], data["adjustment_source"],
+                 data.get("reasoning"), data.get("signal_type"),
+                 model_version, created_at),
+                db_path=db_path,
+            )
+        except sqlite3.IntegrityError:
+            # One prediction per (fixture, market, model): the unique index is
+            # the backstop for a duplicate/concurrent submission. Return the
+            # already-logged row unchanged rather than erroring.
+            existing = db.query_one(
+                """SELECT id FROM predictions
+                   WHERE fixture_id = ? AND market = ? AND model_version = ?
+                   ORDER BY id DESC LIMIT 1""",
+                (fixture["id"], market, model_version), db_path=db_path,
+            )
+            if existing:
+                return jsonify(_get_prediction(db_path, existing["id"])), 200
+            raise
         return jsonify(_get_prediction(db_path, prediction_id)), 201
 
     # ---------------- Gut calls (insert-only) ----------------
@@ -387,8 +402,16 @@ def _dashboard_stats(db_path):
     stats = {
         "totals": {
             "predictions_scored": 0,
-            "model_brier": _avg("SELECT AVG(model_brier_score) AS v FROM prediction_scores"),
-            "final_brier": _avg("SELECT AVG(brier_score) AS v FROM prediction_scores"),
+            "model_brier": _avg(
+                """SELECT AVG(s.model_brier_score) AS v
+                   FROM prediction_scores s JOIN predictions p ON p.id = s.prediction_id
+                   WHERE p.market = '1X2'"""
+            ),
+            "final_brier": _avg(
+                """SELECT AVG(s.brier_score) AS v
+                   FROM prediction_scores s JOIN predictions p ON p.id = s.prediction_id
+                   WHERE p.market = '1X2'"""
+            ),
             "predictions_count": _avg("SELECT COUNT(*) AS v FROM predictions"),
             "scored_count": _avg("SELECT COUNT(*) AS v FROM prediction_scores"),
             "gut_calls_count": _avg("SELECT COUNT(*) AS v FROM gut_calls"),
@@ -450,7 +473,7 @@ def _by_competition(db_path):
     return db.query(
         """SELECT f.competition,
                   COUNT(*) AS n,
-                  AVG(s.brier_score) AS final_brier
+                  AVG(CASE WHEN p.market = '1X2' THEN s.brier_score END) AS final_brier
            FROM predictions p
            JOIN fixtures f ON f.id = p.fixture_id
            LEFT JOIN prediction_scores s ON s.prediction_id = p.id
@@ -479,6 +502,7 @@ def _brier_over_time(db_path):
            FROM prediction_scores s
            JOIN predictions p ON p.id = s.prediction_id
            JOIN fixtures f ON f.id = p.fixture_id
+           WHERE p.market = '1X2'
            GROUP BY DATE(f.date_utc)
            ORDER BY day ASC""",
         db_path=db_path,

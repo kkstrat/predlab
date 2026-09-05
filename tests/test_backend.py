@@ -314,11 +314,12 @@ class PredLabTestCase(unittest.TestCase):
         self.assertEqual(_gameweek_label("t-1"), "t-1")
         self.assertEqual(_gameweek_label(None), "Other")
 
-    def test_seed_gw3_adds_real_fixtures_and_model_predictions_only(self):
+    def test_seed_gw3_adds_real_fixtures_and_three_market_predictions(self):
         import seed_gw3
 
-        n = seed_gw3.load_gw3(db_path=self.db_path)
-        self.assertEqual(n, 10)
+        result = seed_gw3.load_gw3(db_path=self.db_path)
+        self.assertEqual(result["fixtures_inserted"], 10)
+        self.assertEqual(result["predictions_logged"], 30)  # 10 fixtures x 3 markets
 
         fixture_rows = db.query(
             "SELECT external_id, home_team, away_team FROM fixtures WHERE external_id LIKE 'gw3-%' ORDER BY external_id",
@@ -336,9 +337,116 @@ class PredLabTestCase(unittest.TestCase):
             "SELECT * FROM gut_calls WHERE fixture_id IN (SELECT id FROM fixtures WHERE external_id LIKE 'gw3-%')",
             db_path=self.db_path,
         )
-        self.assertEqual(len(pred_rows), 10)
+        self.assertEqual(len(pred_rows), 30)
         self.assertEqual(len(gut_rows), 0)
         self.assertTrue(all(r["model_version"] == "elo_poisson_v1" for r in pred_rows))
+        self.assertEqual(set(r["market"] for r in pred_rows), {"1X2", "OU_2.5", "BTTS"})
+        dupes = db.query(
+            """SELECT fixture_id, market, COUNT(*) AS c FROM predictions
+               WHERE fixture_id IN (SELECT id FROM fixtures WHERE external_id LIKE 'gw3-%')
+               GROUP BY fixture_id, market HAVING c > 1""",
+            db_path=self.db_path,
+        )
+        self.assertEqual(len(dupes), 0)
+
+
+    def test_multi_market_predictions_score_and_dashboard(self):
+        # Log each market for the seeded fixture, then score a 2-1 home win.
+        self.client.post("/predictions", json={
+            "fixture_id": self.fixture_id, "market": "1X2", "selection": "home",
+            "model_probability": 0.6, "final_probability": 0.65, "adjustment_source": "model_only",
+        })
+        self.client.post("/predictions", json={
+            "fixture_id": self.fixture_id, "market": "OU_2.5", "selection": "over",
+            "model_probability": 0.55, "final_probability": 0.6, "adjustment_source": "model_only",
+        })
+        self.client.post("/predictions", json={
+            "fixture_id": self.fixture_id, "market": "BTTS", "selection": "yes",
+            "model_probability": 0.52, "final_probability": 0.7, "adjustment_source": "blended",
+        })
+        resp = self.client.post(f"/fixtures/{self.fixture_id}/score", json={"home_score": 2, "away_score": 1})
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.get_json()["predictions_scored"]["count"], 3)
+
+        scored = db.query(
+            """SELECT p.market, p.selection, s.brier_score, s.model_brier_score
+               FROM prediction_scores s JOIN predictions p ON p.id = s.prediction_id
+               WHERE p.fixture_id = ? ORDER BY p.market""",
+            (self.fixture_id,), db_path=self.db_path,
+        )
+        by_market = {r["market"]: r for r in scored}
+        self.assertEqual(len(scored), 3)
+        # 2-1 home win: 1X2 home hits, OU_2.5 over hits (3 goals), BTTS yes hits.
+        # Each row keeps its OWN probabilities; adjustment_source is a label,
+        # not an overwrite of final vs model.
+        self.assertAlmostEqual(by_market["1X2"]["brier_score"], (0.65 - 1) ** 2, places=3)
+        self.assertAlmostEqual(by_market["1X2"]["model_brier_score"], (0.6 - 1) ** 2, places=3)
+        self.assertAlmostEqual(by_market["OU_2.5"]["brier_score"], (0.6 - 1) ** 2, places=3)
+        self.assertAlmostEqual(by_market["OU_2.5"]["model_brier_score"], (0.55 - 1) ** 2, places=3)
+        self.assertAlmostEqual(by_market["BTTS"]["brier_score"], (0.7 - 1) ** 2, places=3)
+        self.assertAlmostEqual(by_market["BTTS"]["model_brier_score"], (0.52 - 1) ** 2, places=3)
+
+        dash = self.client.get("/dashboard/stats").get_json()
+        market_rows = {r["market"]: r for r in dash["by_market"]}
+        # Three distinct Brier numbers, one per market.
+        self.assertEqual(market_rows["1X2"]["final_brier"], 0.1225)
+        self.assertEqual(market_rows["OU_2.5"]["final_brier"], 0.16)
+        self.assertEqual(market_rows["BTTS"]["final_brier"], 0.09)
+
+    def test_totals_scoped_to_1x2(self):
+        self.client.post("/predictions", json={
+            "fixture_id": self.fixture_id, "market": "1X2", "selection": "home",
+            "model_probability": 0.6, "final_probability": 0.7, "adjustment_source": "model_only",
+        })
+        self.client.post("/predictions", json={
+            "fixture_id": self.fixture_id, "market": "OU_2.5", "selection": "over",
+            "model_probability": 0.9, "final_probability": 0.9, "adjustment_source": "model_only",
+        })
+        self.client.post(f"/fixtures/{self.fixture_id}/score", json={"home_score": 2, "away_score": 1})
+        dash = self.client.get("/dashboard/stats").get_json()
+        t = dash["totals"]
+        # Totals (the headline MODEL/FINAL numbers) stay 1X2-only and continuous;
+        # the OU_2.5 row never blends into them.
+        self.assertAlmostEqual(t["final_brier"], (0.7 - 1) ** 2, places=3)
+        self.assertAlmostEqual(t["model_brier"], (0.6 - 1) ** 2, places=3)
+
+    def test_prediction_unique_index_rejects_identical_duplicate(self):
+        self.client.post("/predictions", json={
+            "fixture_id": self.fixture_id, "market": "1X2", "selection": "home",
+            "model_probability": 0.6, "final_probability": 0.7, "adjustment_source": "model_only",
+        })
+        with self.assertRaises(sqlite3.IntegrityError):
+            db.execute(
+                """INSERT INTO predictions
+                   (fixture_id, market, selection, model_probability, final_probability,
+                    adjustment_source, model_version, created_at)
+                   VALUES (?, ?, ?, ?, ?, 'model_only', 'elo_poisson_v1', ?)""",
+                (self.fixture_id, "1X2", "home", 0.6, 0.7, "2099-01-01T10:00:00+00:00"),
+                db_path=self.db_path,
+            )
+        rows = db.query(
+            "SELECT * FROM predictions WHERE fixture_id = ?", (self.fixture_id,), db_path=self.db_path
+        )
+        self.assertEqual(len(rows), 1)
+
+    def test_prediction_double_post_is_idempotent(self):
+        payload = {
+            "fixture_id": self.fixture_id,
+            "market": "1X2",
+            "selection": "home",
+            "model_probability": 0.6,
+            "final_probability": 0.7,
+            "adjustment_source": "model_only",
+        }
+        first = self.client.post("/predictions", json=payload)
+        second = self.client.post("/predictions", json=payload)
+        self.assertEqual(first.status_code, 201)
+        self.assertEqual(second.status_code, 200)
+        self.assertEqual(first.get_json()["id"], second.get_json()["id"])
+        rows = db.query(
+            "SELECT * FROM predictions WHERE fixture_id = ?", (self.fixture_id,), db_path=self.db_path
+        )
+        self.assertEqual(len(rows), 1)
 
     def test_dashboard_daily_trend_includes_gut_brier(self):
         self.client.post("/predictions", json={

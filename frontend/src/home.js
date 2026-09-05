@@ -42,6 +42,11 @@ export function buildBrierTrace(history = [], lastN = 8) {
       weeks.set(label, w);
     }
     for (const p of f.predictions || []) {
+      // 1X2 Brier stays its own continuous number from GW1 onward; O2.5 and
+      // BTTS get separate per-market Brier (Dashboard by-market), never blended
+      // into the 1X2 figure or each other. Rows predating the market column
+      // (missing market) were all 1X2, so they still count.
+      if (p.market && p.market !== '1X2') continue;
       if (p.model_brier_score != null) w.model.push(p.model_brier_score);
       if (p.brier_score != null) w.final.push(p.brier_score);
     }
