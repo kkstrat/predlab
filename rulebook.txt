@@ -14,3 +14,6 @@ Away hope = genuine uncertainty, hoping not believing (~0.50).
 
 4. GW2
 By Subject: note phrases tracked per team (e.g. "Man Utd — home lock"), split at the comma. Separate from the By Note aggregate.
+
+5. GW3
+System now logs 3 markets per fixture (1X2, OU_2.5, BTTS), model Brier tracked separately per market — never blended. GW1/GW2 remain 1X2-only, no backfill.
