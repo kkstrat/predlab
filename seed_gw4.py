@@ -1,11 +1,11 @@
-"""Load the real EPL 2026/27 Gameweek 3 fixtures, model predictions, and gut calls.
+"""Load the real EPL 2026/27 Gameweek 4 fixtures, model predictions, and gut calls.
 
-Additive-only, matching the GW1/GW2 seed pattern. This script inserts fixtures
-for gw3-* only and logs model predictions for all three markets (1X2, O2.5,
+Additive-only, matching the GW3 seed pattern. This script inserts fixtures
+for gw4-* only and logs model predictions for all three markets (1X2, O2.5,
 BTTS) per fixture, without touching any existing rows for other gameweeks.
 
 Run from the predlab root:
-    python seed_gw3.py
+    python seed_gw4.py
 """
 
 from datetime import datetime, timedelta, timezone
@@ -13,20 +13,20 @@ from datetime import datetime, timedelta, timezone
 from backend import db
 from backend.models.runner import compute_model_prediction
 
-# Real GW3 fixtures, 4-6 September 2026. Source: Premier League match API,
-# converted from BST to UTC by subtracting 1 hour from local kickoff times.
-GW3_FIXTURES = [
+# Real GW4 fixtures, 12-14 September 2026. Source: premierleague.com.
+# Kickoff times originally given in EAT (UTC+3), converted to UTC below.
+GW4_FIXTURES = [
     # (external_id, date_utc, home, away)
-    ("gw3-1", "2026-09-04T19:00:00", "Ipswich Town", "Liverpool"),
-    ("gw3-2", "2026-09-05T11:30:00", "Newcastle United", "AFC Bournemouth"),
-    ("gw3-3", "2026-09-05T14:00:00", "Brentford", "Sunderland"),
-    ("gw3-4", "2026-09-05T14:00:00", "Brighton & Hove Albion", "Leeds United"),
-    ("gw3-5", "2026-09-05T14:00:00", "Fulham", "Crystal Palace"),
-    ("gw3-6", "2026-09-05T14:00:00", "Manchester City", "Coventry City"),
-    ("gw3-7", "2026-09-05T14:00:00", "Nottingham Forest", "Tottenham Hotspur"),
-    ("gw3-8", "2026-09-05T16:30:00", "Hull City", "Aston Villa"),
-    ("gw3-9", "2026-09-06T13:00:00", "Everton", "Manchester United"),
-    ("gw3-10", "2026-09-06T15:30:00", "Arsenal", "Chelsea"),
+    ("gw4-1", "2026-09-12T14:00:00", "Liverpool", "Fulham"),
+    ("gw4-2", "2026-09-12T14:00:00", "Crystal Palace", "Ipswich Town"),
+    ("gw4-3", "2026-09-12T14:00:00", "AFC Bournemouth", "Brentford"),
+    ("gw4-4", "2026-09-12T14:00:00", "Aston Villa", "Nottingham Forest"),
+    ("gw4-5", "2026-09-12T14:00:00", "Chelsea", "Hull City"),
+    ("gw4-6", "2026-09-12T16:30:00", "Tottenham Hotspur", "Everton"),
+    ("gw4-7", "2026-09-12T19:00:00", "Sunderland", "Arsenal"),
+    ("gw4-8", "2026-09-13T13:00:00", "Coventry City", "Brighton & Hove Albion"),
+    ("gw4-9", "2026-09-13T15:30:00", "Manchester United", "Manchester City"),
+    ("gw4-10", "2026-09-14T19:00:00", "Leeds United", "Newcastle United"),
 ]
 
 
@@ -59,19 +59,19 @@ def _log_prediction(fixture, db_path=None):
                 adjustment_source, reasoning, signal_type, model_version, created_at)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (fixture["id"], market, selection, probs[selection], probs[selection],
-             "model_only", "auto-seeded for GW3", None, "elo_poisson_v1", created_at),
+             "model_only", "auto-seeded for GW4", None, "elo_poisson_v1", created_at),
             db_path=db_path,
         )
         logged += 1
     return logged
 
 
-def load_gw3(db_path=None):
+def load_gw4(db_path=None):
     db.init_db(db_path)
 
     inserted = 0
     preds_logged = 0
-    for external_id, date_utc, home, away in GW3_FIXTURES:
+    for external_id, date_utc, home, away in GW4_FIXTURES:
         fixture = db.query_one(
             "SELECT * FROM fixtures WHERE external_id = ?", (external_id,), db_path=db_path
         )
@@ -94,7 +94,7 @@ def load_gw3(db_path=None):
 
 
 if __name__ == "__main__":
-    result = load_gw3()
-    print(f"Loaded {result['fixtures_inserted']} new GW3 fixtures, "
+    result = load_gw4()
+    print(f"Loaded {result['fixtures_inserted']} new GW4 fixtures, "
           f"logged {result['predictions_logged']} prediction row(s) "
           f"(3 markets per fixture; existing data was left untouched).")
